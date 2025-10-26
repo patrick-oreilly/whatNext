@@ -13,7 +13,13 @@ struct FindGame: View {
     var body: some View {
         NavigationView {
             ZStack{
-                Color.indigo.ignoresSafeArea()
+                //Color.indigo.ignoresSafeArea()
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.red, Color.orange]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
                 
                 VStack(spacing: 20) {
                     Text("Enter Room ID:")

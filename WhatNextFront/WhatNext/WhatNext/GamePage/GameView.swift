@@ -42,9 +42,21 @@ struct GameView: View {
                             .padding(25)
                             .foregroundStyle(Color.white)
                     }
+                    
+                    Spacer()
+                    
                     HStack{
                         ForEach(players, id: \.self) { player in
                             VStack{
+                                if let index = players.firstIndex(of: player) {
+                                    let score = index > 0 ? 200 / index : 200
+                                    
+                                    Text("\(score)")
+                                        .font(.system(size: 20))
+                                        .fontWeight(.heavy)
+                                        .foregroundStyle(Color.white)
+                                }
+                                
                                 Image(systemName: "person.fill")
                                     .resizable()
                                     .frame(width: 50, height: 50)
