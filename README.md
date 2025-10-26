@@ -1,6 +1,5 @@
 # What's Next? 
 A turn-based narrative adventure game where an AI Game Master creates a unique story for you and your friends.
-Overview
 
 ![Swift](https://img.shields.io/badge/Swift-5.0+-orange.svg)
 ![iOS](https://img.shields.io/badge/iOS-15.0+-blue.svg)
