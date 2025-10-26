@@ -3,14 +3,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from whats_next_agent import prompts
+from agent import prompts
 import os
 import uuid
 from typing import Dict
 
 load_dotenv()
 
-from whats_next_agent.agent import root_agent
+from agent.agent import root_agent
 from google.adk.runners import InMemoryRunner
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
