@@ -3,7 +3,7 @@
 # What Next?
 A turn-based narrative adventure game where an AI Game Master creates a unique story for you and your friends.
 
-![Game Image](FrontendFirstDraft.png)
+![Game Image](Images/FrontendFirstDraft.png)
 
 
   
