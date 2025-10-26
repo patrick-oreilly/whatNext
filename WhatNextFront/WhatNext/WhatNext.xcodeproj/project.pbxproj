@@ -14,6 +14,8 @@
 		EADBE97D2EAE21E50025FADF /* Lobby.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE97C2EAE21E50025FADF /* Lobby.swift */; };
 		EADBE97F2EAE3CA00025FADF /* FindGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE97E2EAE3CA00025FADF /* FindGame.swift */; };
 		EADBE9822EAE4DB60025FADF /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9812EAE4DB60025FADF /* GameView.swift */; };
+		EADBE9842EAE57290025FADF /* PromptScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9832EAE57290025FADF /* PromptScreen.swift */; };
+		EADBE9862EAE5C1F0025FADF /* VoteScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9852EAE5C1F0025FADF /* VoteScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +28,8 @@
 		EADBE97C2EAE21E50025FADF /* Lobby.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lobby.swift; sourceTree = "<group>"; };
 		EADBE97E2EAE3CA00025FADF /* FindGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindGame.swift; sourceTree = "<group>"; };
 		EADBE9812EAE4DB60025FADF /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		EADBE9832EAE57290025FADF /* PromptScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptScreen.swift; sourceTree = "<group>"; };
+		EADBE9852EAE5C1F0025FADF /* VoteScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +94,8 @@
 			isa = PBXGroup;
 			children = (
 				EADBE9812EAE4DB60025FADF /* GameView.swift */,
+				EADBE9832EAE57290025FADF /* PromptScreen.swift */,
+				EADBE9852EAE5C1F0025FADF /* VoteScreen.swift */,
 			);
 			path = GamePage;
 			sourceTree = "<group>";
@@ -167,6 +173,8 @@
 				EADBE97F2EAE3CA00025FADF /* FindGame.swift in Sources */,
 				EADBE97B2EAE20FD0025FADF /* ContentView.swift in Sources */,
 				EADBE96B2EAE1B270025FADF /* WhatNextApp.swift in Sources */,
+				EADBE9862EAE5C1F0025FADF /* VoteScreen.swift in Sources */,
+				EADBE9842EAE57290025FADF /* PromptScreen.swift in Sources */,
 				EADBE97D2EAE21E50025FADF /* Lobby.swift in Sources */,
 				EADBE9822EAE4DB60025FADF /* GameView.swift in Sources */,
 			);
