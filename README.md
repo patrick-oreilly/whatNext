@@ -1,12 +1,18 @@
-# What's Next? 
+<div align="center">
+  
+# What Next?
 A turn-based narrative adventure game where an AI Game Master creates a unique story for you and your friends.
 
 ![Game Image](FrontendFirstDraft.png)
 
-![Swift](https://img.shields.io/badge/Swift-5.0+-orange.svg)
-![iOS](https://img.shields.io/badge/iOS-15.0+-blue.svg)
-![Platform](https://img.shields.io/badge/Platform-iOS-lightgrey.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+  
+
+[![Swift](https://img.shields.io/badge/Swift-5.0+-orange.svg)]()
+[![iOS](https://img.shields.io/badge/iOS-15.0+-blue.svg)]()
+[![Platform](https://img.shields.io/badge/Platform-iOS-lightgrey.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
+</div>
 
 ## Overview
 
