@@ -1,6 +1,6 @@
-from google.adk import Agent
+from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent
 
-root_agent = Agent(
+root_agent = LlmAgent(
     model='gemini-2.5-flash',
     name='root_agent',
     description='A helpful assistant for user questions.',
