@@ -1,0 +1,1 @@
+// Handles Server-Sent Events (SSE) to receive story text word-by-word
