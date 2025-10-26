@@ -45,4 +45,4 @@ Gather 2-4 players and embark on a collaborative storytelling experience. An AI 
 
 ---
 
-Built with Swift | Powered by AI
+Built with Swift | Powered by AI | Made by the O'Reilly bros
