@@ -30,6 +30,7 @@ class PlayerInput(BaseModel):
     player_name: str
     text: str
     votes: int = 0
+    voters: List[str] = []
     timestamp: datetime = Field(default_factory=datetime.now)
 
 
