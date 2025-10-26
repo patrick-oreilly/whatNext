@@ -1,127 +1,452 @@
-# api_server.py
-from fastapi import FastAPI, Request
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from agent import prompts
-import os
-import uuid
-from typing import Dict
+from datetime import datetime
 
-load_dotenv()
+from backend.core.models import (
+    CreateRoomRequest, JoinRoomRequest, SubmitInputRequest,
+    CastVoteRequest, RoomCreatedResponse, JoinRoomResponse,
+    HealthResponse, GamePhase
+)
+from backend.game_management.room_manager import RoomManager
+from backend.session_management.session_manager import SessionManager
+from backend.game_management.story_generator import StoryGenerator
+from backend.core.storage import create_storage
+from backend.core.errors import register_exception_handlers
+from backend.core.config import settings
 
-from agent.agent import root_agent
-from google.adk.runners import InMemoryRunner
-from google.adk.agents import LiveRequestQueue
-from google.adk.agents.run_config import RunConfig
-from google.genai.types import Part, Content
+# ============================================================================
+# LOGGING SETUP
+# ============================================================================
 
-app = FastAPI()
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
+# ============================================================================
+# GLOBAL MANAGERS
+# ============================================================================
+
+storage = create_storage(settings.STORAGE_TYPE)
+room_manager = RoomManager(storage)
+session_manager = SessionManager()
+story_generator = StoryGenerator()
+
+# ============================================================================
+# BACKGROUND TASKS
+# ============================================================================
+
+async def cleanup_task():
+    """Background task to cleanup idle rooms"""
+    while True:
+        try:
+            await asyncio.sleep(300)  # Run every 5 minutes
+            deleted = room_manager.cleanup_idle_rooms()
+            if deleted > 0:
+                logger.info(f"Background cleanup: removed {deleted} idle rooms")
+        except Exception as e:
+            logger.error(f"Error in cleanup task: {e}")
+
+# ============================================================================
+# APPLICATION LIFECYCLE
+# ============================================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events"""
+    # Startup
+    logger.info("=" * 60)
+    logger.info("What's Next - Game Master API Starting")
+    logger.info("=" * 60)
+    
+    # Validate configuration
+    try:
+        settings.validate()
+        logger.info("✅ Configuration validated")
+    except ValueError as e:
+        logger.error(f"❌ Configuration error: {e}")
+        raise
+    
+    # Start background cleanup task
+    cleanup_task_handle = asyncio.create_task(cleanup_task())
+    logger.info("✅ Background cleanup task started")
+    
+    logger.info(f"✅ Server ready on {settings.HOST}:{settings.PORT}")
+    logger.info("=" * 60)
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down...")
+    cleanup_task_handle.cancel()
+    
+    # Close all active sessions
+    for room_id in list(session_manager.sessions.keys()):
+        session_manager.close_session(room_id)
+    
+    logger.info("✅ Shutdown complete")
+
+# ============================================================================
+# FASTAPI APP
+# ============================================================================
+
+app = FastAPI(
+    title="What's Next - Game Master API",
+    description="AI-powered collaborative storytelling game backend",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Store sessions: {user_id: (live_request_queue, session_id)}
+# Register custom exception handlers
+register_exception_handlers(app)
 
-active_sessions: Dict[str, tuple] = {}
+# ============================================================================
+# HEALTH & STATUS ENDPOINTS
+# ============================================================================
 
-
-async def start_agent_session(user_id: str):
-    """Initialize ADK agent session with Runner."""
-
-    runner = InMemoryRunner(
-        app_name="What Next App",
-        agent=root_agent,
-    )
-    
-    # Create session
-    session = await runner.session_service.create_session(
-        app_name="What Next App",
-        user_id=user_id,
-    )
-    
-    run_config = RunConfig(response_modalities=["TEXT"])
-    live_request_queue = LiveRequestQueue()
-    
-    # Use user_id and session_id 
-
-    live_events = runner.run_live(
-        user_id=user_id,
-        session_id=session.id,
-        live_request_queue=live_request_queue,
-        run_config=run_config,
-    )
-    
-    return live_events, live_request_queue, session.id
-
-# Health check  endpoint
-
-@app.get("/")
+@app.get("/", response_model=HealthResponse)
 async def root():
-    api_key = os.getenv("GOOGLE_API_KEY")
+    """Health check endpoint"""
+    return HealthResponse(
+        status="healthy",
+        api_configured=bool(settings.GOOGLE_API_KEY),
+        active_rooms=len(room_manager.list_rooms())
+    )
+
+@app.get("/health", response_model=HealthResponse)
+async def health():
+    """Detailed health check"""
+    return HealthResponse(
+        status="healthy",
+        api_configured=bool(settings.GOOGLE_API_KEY),
+        active_rooms=len(room_manager.list_rooms())
+    )
+
+@app.get("/rooms")
+async def list_rooms():
+    """List all active room IDs"""
     return {
-        "status": "healthy",
-        "api_configured": bool(api_key),
-        "api_key_prefix": api_key[:10] + "..." if api_key else None
+        "rooms": room_manager.list_rooms(),
+        "count": len(room_manager.list_rooms())
     }
 
+# ============================================================================
+# ROOM MANAGEMENT ENDPOINTS
+# ============================================================================
 
-# Streaming endpoint
-
-@app.get("/stream")
-async def stream_story(user_id: str = "default"):
-    """Stream AI-generated story using Server-Sent Events with ADK."""
+@app.post("/api/rooms/create", response_model=RoomCreatedResponse)
+async def create_room(request: CreateRoomRequest):
+    """
+    Create a new game room
     
-    async def generate():
-        user_id_str = str(user_id)
-        session_id = None
-        
-        try:
-            live_events, live_request_queue, session_id = await start_agent_session(user_id_str)
-            active_sessions[user_id_str] = (live_request_queue, session_id)
-            
-            # Send initial prompt
+    Returns room_id that players use to join
+    """
+    room_id = room_manager.create_room(
+        storyline=request.storyline,
+        max_turns=request.max_turns
+    )
+    
+    logger.info(f"Created room {room_id} with storyline {request.storyline}")
+    
+    return RoomCreatedResponse(
+        room_id=room_id,
+        storyline=request.storyline.value
+    )
 
-            # prompt = "Let's begin your basketball journey. Where does your story start?"
-            content = Content(role="user", parts=[Part.from_text(text=prompts.HOOP_DREAMS_PROMPT)])
-            live_request_queue.send_content(content=content)
+@app.post("/api/rooms/join", response_model=JoinRoomResponse)
+async def join_room(request: JoinRoomRequest):
+    """
+    Add player to existing room
+    
+    Validates:
+    - Room exists
+    - Room not full
+    - Game hasn't started
+    - Player name not taken
+    """
+    room_manager.add_player(request.room_id, request.player_name)
+    
+    room = room_manager.get_room(request.room_id)
+    
+    logger.info(f"Player '{request.player_name}' joined room {request.room_id}")
+    
+    return JoinRoomResponse(
+        room_id=request.room_id,
+        players=room.players
+    )
+
+@app.post("/api/rooms/{room_id}/start")
+async def start_game(room_id: str):
+    """
+    Start the game
+    
+    Validates:
+    - Room exists
+    - Enough players (min 2)
+    - Game not already started
+    
+    Creates ADK session and generates opening story
+    """
+    # Validate and start game
+    room_manager.start_game(room_id)
+    
+    # Create ADK session for this room
+    await session_manager.create_session(room_id, user_id=room_id)
+    
+    # Get opening prompt
+    room = room_manager.get_room(room_id)
+    opening_prompt = story_generator.generate_opening_prompt(room.storyline)
+    
+    # Send opening prompt to AI (will be streamed via /stream endpoint)
+    session_manager.send_message(room_id, opening_prompt)
+    
+    logger.info(f"Game started in room {room_id}")
+    
+    return {
+        "status": "started",
+        "room_id": room_id,
+        "turn": 1,
+        "phase": GamePhase.GENERATING_STORY
+    }
+
+@app.get("/api/rooms/{room_id}/state")
+async def get_room_state(room_id: str):
+    """
+    Get current state of room
+    
+    Returns:
+    - Players
+    - Scores
+    - Current turn
+    - Game phase
+    - Story history
+    - Player inputs (if in voting phase)
+    """
+    return room_manager.get_room_state(room_id)
+
+@app.delete("/api/rooms/{room_id}")
+async def delete_room(room_id: str):
+    """Delete a room and close its session"""
+    # Close ADK session
+    session_manager.close_session(room_id)
+    
+    # Delete room
+    room_manager.delete_room(room_id)
+    
+    logger.info(f"Deleted room {room_id}")
+    
+    return {"status": "deleted", "room_id": room_id}
+
+# ============================================================================
+# GAMEPLAY ENDPOINTS
+# ============================================================================
+
+@app.post("/api/input/submit")
+async def submit_input(request: SubmitInputRequest):
+    """
+    Submit player's story continuation idea
+    
+    Phase: PLAYER_INPUT
+    
+    Validates:
+    - Room exists
+    - Player in room
+    - Correct phase
+    
+    Auto-advances to VOTING when all players submit
+    """
+    room_manager.submit_input(
+        room_id=request.room_id,
+        player_name=request.player_name,
+        input_text=request.input_text
+    )
+    
+    room = room_manager.get_room(request.room_id)
+    
+    logger.info(f"Player '{request.player_name}' submitted input in room {request.room_id}")
+    
+    return {
+        "status": "submitted",
+        "submissions": len(room.player_inputs),
+        "total_players": len(room.players),
+        "phase": room.phase
+    }
+
+@app.post("/api/voting/cast")
+async def cast_vote(request: CastVoteRequest):
+    """
+    Cast vote for favorite story continuation
+    
+    Phase: VOTING
+    
+    Validates:
+    - Room exists
+    - Voter in room
+    - Correct phase
+    - Not voting for self
+    - Chosen player has input
+    """
+    room_manager.cast_vote(
+        room_id=request.room_id,
+        voter=request.voter,
+        chosen_player=request.chosen_player
+    )
+    
+    logger.info(f"Player '{request.voter}' voted for '{request.chosen_player}' in room {request.room_id}")
+    
+    return {"status": "voted"}
+
+@app.get("/api/voting/results/{room_id}")
+async def get_voting_results(room_id: str):
+    """
+    Calculate and return voting results
+    
+    Determines winner, updates scores
+    """
+    results = room_manager.calculate_winner(room_id)
+    
+    logger.info(f"Voting results calculated for room {room_id}: winner is '{results.winning_player}'")
+    
+    return results
+
+@app.post("/api/turn/advance/{room_id}")
+async def advance_turn(room_id: str):
+    """
+    Advance to next turn
+    
+    Gets winning input from voting, sends to AI, streams response
+    """
+    # Get winning input
+    winning_input = room_manager.get_winning_input(room_id)
+    
+    if not winning_input:
+        return {"error": "No winning input found"}
+    
+    # Advance turn
+    room_manager.advance_turn(room_id)
+    
+    room = room_manager.get_room(room_id)
+    
+    # Check if game should end
+    if room.phase == GamePhase.GAME_OVER:
+        # Close session (Decision 1: close after MAX_TURNS)
+        session_manager.close_session(room_id)
+        
+        logger.info(f"Game ended in room {room_id}")
+        
+        return {
+            "status": "game_over",
+            "turn": room.turn,
+            "final_scores": room.scores
+        }
+    
+    # Generate continuation prompt
+    if story_generator.should_end_story(room.turn, room.max_turns):
+        prompt = story_generator.generate_final_prompt(
+            storyline=room.storyline,
+            story_history=room.story_history,
+            winning_input=winning_input
+        )
+    else:
+        prompt = story_generator.generate_continuation_prompt(
+            storyline=room.storyline,
+            story_history=room.story_history,
+            winning_input=winning_input,
+            turn=room.turn,
+            max_turns=room.max_turns
+        )
+    
+    # Set phase to GENERATING_STORY
+    room_manager.set_phase(room_id, GamePhase.GENERATING_STORY)
+    
+    # Send to AI
+    session_manager.send_message(room_id, prompt)
+    
+    logger.info(f"Advanced to turn {room.turn} in room {room_id}")
+    
+    return {
+        "status": "turn_advanced",
+        "turn": room.turn,
+        "phase": GamePhase.GENERATING_STORY
+    }
+
+# ============================================================================
+# AI STREAMING ENDPOINT
+# ============================================================================
+
+@app.get("/api/story/stream/{room_id}")
+async def stream_story(room_id: str):
+    """
+    Stream AI-generated story content
+    
+    Uses Server-Sent Events (SSE) format
+    
+    Returns:
+    - Text chunks as they're generated
+    - [DONE] when complete
+    - [ERROR] if generation fails
+    
+    Decision 3: Implements automatic retry on failure
+    """
+    room = room_manager.get_room(room_id)
+    
+    async def event_generator():
+        """Generate Server-Sent Events"""
+        try:
+            full_response = ""
             
-            # Stream events from agent
-            async for event in live_events:
-                if event.turn_complete:
-                    yield "data: [DONE]\n\n"
-                    break
+            # Stream from ADK with retry logic (Decision 3)
+            async for chunk in session_manager.stream_response(room_id):
+                full_response += chunk
                 
-                if event.interrupted:
-                    yield "data: [INTERRUPTED]\n\n"
-                    break
+                # Send chunk to client
+                yield f"data: {chunk}\n\n"
                 
-                if event.content and event.content.parts:
-                    part = event.content.parts[0]
-                    
-                    if part.text and event.partial:
-                        yield f"{part.text}"
-                        # words = part.text.split(" ")
-                        # for word in words:
-                        #     yield f"Data: {word}" + "\n\n"
+                # Small delay for smooth streaming
+                await asyncio.sleep(0.01)
             
-            # Cleanup
-            live_request_queue.close()
-            if user_id_str in active_sessions:
-                del active_sessions[user_id_str]
-                
+            # Store complete story segment
+            room_manager.add_story_segment(
+                room_id=room_id,
+                content=full_response,
+                winning_player=None  # Set by voting results
+            )
+            
+            # Check if this was turn 1 (opening) or continuation
+            room = room_manager.get_room(room_id)
+            
+            if room.turn == 1:
+                # After opening, move to player input
+                room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+            else:
+                # After continuation, move to player input for next turn
+                room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+            
+            # Signal completion
+            yield "data: [DONE]\n\n"
+            
+            logger.info(f"Story streaming completed for room {room_id}, turn {room.turn}")
+            
         except Exception as e:
-            print(f"Error in stream: {e}")
+            logger.error(f"Error streaming story for room {room_id}: {e}")
             yield f"data: [ERROR] {str(e)}\n\n"
-            if user_id_str in active_sessions:
-                del active_sessions[user_id_str]
     
     return StreamingResponse(
-        generate(),
+        event_generator(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -130,27 +455,48 @@ async def stream_story(user_id: str = "default"):
         }
     )
 
-# Send message endpoint
+# ============================================================================
+# UTILITY ENDPOINTS
+# ============================================================================
 
-@app.post("/send/{user_id}")
-async def send_message(user_id: str, request: Request):
-    """Send additional messages to existing session."""
-    session_data = active_sessions.get(user_id)
+@app.get("/api/sessions/active")
+async def get_active_sessions():
+    """Get information about active ADK sessions"""
+    sessions = session_manager.get_active_sessions()
     
-    if not session_data:
-        return {"error": "Session not found"}
-    
-    live_request_queue, session_id = session_data
-    
-    data = await request.json()
-    message_text = data.get("message", "")
-    
-    content = Content(role="user", parts=[Part.from_text(text=message_text)])
-    live_request_queue.send_content(content=content)
-    
-    return {"status": "sent", "session_id": session_id}
+    return {
+        "count": len(sessions),
+        "sessions": [
+            {
+                "room_id": session.room_id,
+                "session_id": session.session_id,
+                "message_count": session.message_count,
+                "created_at": session.created_at.isoformat()
+            }
+            for session in sessions.values()
+        ]
+    }
 
+@app.post("/api/cleanup/run")
+async def trigger_cleanup():
+    """Manually trigger room cleanup"""
+    deleted = room_manager.cleanup_idle_rooms()
+    
+    return {
+        "status": "complete",
+        "rooms_deleted": deleted
+    }
+
+# ============================================================================
+# MAIN
+# ============================================================================
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    
+    uvicorn.run(
+        app,
+        host=settings.HOST,
+        port=settings.PORT,
+        log_level=settings.LOG_LEVEL.lower()
+    )

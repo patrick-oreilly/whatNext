@@ -1,24 +1,53 @@
+import os
 from typing import List
-from pydantic import BaseSettings
+from dotenv import load_dotenv
 
-class Settings(BaseSettings):
-    # API
-    host: str = "0.0.0.0"
-    port: int = 8080
-    cors_origins: List[str] = ["*"]
+load_dotenv()
+
+class Settings:
+    """Application configuration"""
     
-    # Game
-    max_players: int = 4
-    min_players: int = 2
-    max_turns: int = 10
-    input_timer_seconds: int = 120
+    # API Settings
+    HOST: str = "0.0.0.0"
+    PORT: int = 8080
+    CORS_ORIGINS: List[str] = ["*"]
     
-    # ADK
-    google_api_key: str
-    model_name: str = "gemini-2.0-flash-live-001"
+    # Game Settings
+    MAX_PLAYERS: int = 4
+    MIN_PLAYERS: int = 2
+    MAX_TURNS: int = 10 
+    INPUT_TIMER_SECONDS: int = 120
+    VOTING_TIMER_SECONDS: int = 60
+    
+    # Room Settings
+    IDLE_TIMEOUT_MINUTES: int = 30  
+    ROOM_ID_LENGTH: int = 6
+    
+    # ADK Settings
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    MODEL_NAME: str = "gemini-2.0-flash-live-001"
+    
+    # Error Handling
+    MAX_RETRIES: int = 3  
+    RETRY_DELAY_SECONDS: float = 2.0
+    RETRY_BACKOFF_MULTIPLIER: float = 1.5
     
     # Storage
-    storage_type: str = "memory"  
+    STORAGE_TYPE: str = "memory" 
+    
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    
+    @classmethod
+    def validate(cls):
+        """Validate critical settings on startup"""
+        if not cls.GOOGLE_API_KEY:
+            raise ValueError("GOOGLE_API_KEY environment variable is required")
+        if cls.MAX_TURNS < 1:
+            raise ValueError("MAX_TURNS must be at least 1")
+        if cls.MIN_PLAYERS < 2:
+            raise ValueError("MIN_PLAYERS must be at least 2")
+        if cls.MAX_PLAYERS < cls.MIN_PLAYERS:
+            raise ValueError("MAX_PLAYERS must be >= MIN_PLAYERS")
 
 settings = Settings()
-
