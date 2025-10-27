@@ -8,7 +8,7 @@ import { RoomCode } from '../components/lobby/RoomCode';
 import { roomsApi } from '../api/rooms';
 import { useGameStore } from '../store/gameStore';
 import { usePolling } from '../hooks';
-import { MIN_PLAYERS, LOBBY_POLL_INTERVAL } from '../utils/constants';
+import { MIN_PLAYERS, MAX_PLAYERS, LOBBY_POLL_INTERVAL } from '../utils/constants';
 import { GamePhase, STORYLINE_LABELS } from '../types';
 
 export const Lobby: React.FC = () => {
@@ -124,7 +124,7 @@ export const Lobby: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center p-3 bg-accent-white bg-opacity-10 rounded-lg">
                     <span className="text-accent-white font-bold uppercase tracking-wide">Players:</span>
-                    <span className="text-primary font-black">{roomState.players.length}/4</span>
+                    <span className="text-primary font-black">{roomState.players.length}/{MAX_PLAYERS}</span>
                   </div>
                 </div>
               </Card>
@@ -140,7 +140,7 @@ export const Lobby: React.FC = () => {
             <div>
               <Card className="bg-accent-black border-4 border-accent-white">
                 <h2 className="text-2xl font-black text-accent-white uppercase tracking-tight mb-6">
-                  Players ({roomState.players.length}/4)
+                  Players ({roomState.players.length}/{MAX_PLAYERS})
                 </h2>
                 <PlayerList
                   players={roomState.players}

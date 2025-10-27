@@ -13,7 +13,7 @@ class Settings:
     CORS_ORIGINS: List[str] = ["*"]
     
     # Game Settings
-    MAX_PLAYERS: int = 4
+    MAX_PLAYERS: int = 10
     MIN_PLAYERS: int = 2
     MAX_TURNS: int = 10 
     INPUT_TIMER_SECONDS: int = 120

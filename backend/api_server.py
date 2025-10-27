@@ -211,7 +211,7 @@ async def start_game(room_id: str):
 async def get_room_state(room_id: str):
     """
     Get current state of room
-    
+
     Returns:
     - Players
     - Scores
@@ -221,6 +221,54 @@ async def get_room_state(room_id: str):
     - Player inputs (if in voting phase)
     """
     return room_manager.get_room_state(room_id)
+
+@app.get("/api/rooms/{room_id}/timer")
+async def get_input_timer(room_id: str):
+    """
+    Get current input phase timer status
+
+    Returns:
+    - time_remaining: Seconds remaining in input phase
+    - has_timed_out: Whether phase has timed out
+    - submitted_count: Number of players who submitted
+    - total_players: Total number of players
+    - timed_out_players: List of players who timed out
+    """
+    room = room_manager.get_room(room_id)
+
+    if room.phase != GamePhase.PLAYER_INPUT:
+        return {
+            "active": False,
+            "message": "Input phase not active"
+        }
+
+    time_remaining = room.get_input_time_remaining(settings.INPUT_TIMER_SECONDS)
+    has_timed_out = room.is_input_phase_timed_out(settings.INPUT_TIMER_SECONDS)
+
+    return {
+        "active": True,
+        "time_remaining": time_remaining,
+        "has_timed_out": has_timed_out,
+        "timeout_seconds": settings.INPUT_TIMER_SECONDS,
+        "submitted_count": len(room.player_inputs),
+        "total_players": len(room.players),
+        "timed_out_players": room.timed_out_players
+    }
+
+@app.post("/api/rooms/{room_id}/timeout")
+async def trigger_input_timeout(room_id: str):
+    """
+    Manually trigger input phase timeout
+
+    Used when timer expires on client side
+    """
+    room_manager.handle_input_timeout(room_id)
+
+    return {
+        "status": "timeout_handled",
+        "room_id": room_id,
+        "phase": room_manager.get_room(room_id).phase
+    }
 
 @app.delete("/api/rooms/{room_id}")
 async def delete_room(room_id: str):
@@ -388,14 +436,17 @@ async def stream_story(room_id: str):
     """
     room = room_manager.get_room(room_id)
 
-    # Check if stream is already active for this room
+    # Create turn-specific cache key to prevent replaying wrong turn's story
+    stream_key = f"{room_id}_turn_{room.turn}"
+
+    # Check if stream is already active for this specific turn
     async with active_streams_lock:
-        if room_id in active_streams:
-            logger.warning(f"Stream already active for room {room_id}, waiting for completion")
+        if stream_key in active_streams:
+            logger.warning(f"Stream already active for room {room_id} turn {room.turn}, replaying cached response")
             # Return cached response if available
-            if "response" in active_streams[room_id]:
+            if "response" in active_streams[stream_key]:
                 async def replay_generator():
-                    cached = active_streams[room_id]["response"]
+                    cached = active_streams[stream_key]["response"]
                     for chunk in cached:
                         yield f"data: {chunk}\n\n"
                         await asyncio.sleep(0.01)
@@ -411,8 +462,8 @@ async def stream_story(room_id: str):
                     }
                 )
 
-        # Mark stream as active
-        active_streams[room_id] = {"response": []}
+        # Mark stream as active for this turn
+        active_streams[stream_key] = {"response": []}
 
     async def event_generator():
         """Generate Server-Sent Events"""
@@ -433,8 +484,8 @@ async def stream_story(room_id: str):
 
             # Store cached chunks for late joiners
             async with active_streams_lock:
-                if room_id in active_streams:
-                    active_streams[room_id]["response"] = chunks
+                if stream_key in active_streams:
+                    active_streams[stream_key]["response"] = chunks
 
             # Store complete story segment
             room_manager.add_story_segment(
@@ -465,8 +516,8 @@ async def stream_story(room_id: str):
             # Clean up after a delay to allow late joiners
             await asyncio.sleep(5)
             async with active_streams_lock:
-                if room_id in active_streams:
-                    del active_streams[room_id]
+                if stream_key in active_streams:
+                    del active_streams[stream_key]
 
     return StreamingResponse(
         event_generator(),

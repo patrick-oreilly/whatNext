@@ -16,12 +16,12 @@ A turn-based narrative adventure game where an AI Game Master creates a unique s
 
 ## Overview
 
-Gather 2-4 players and embark on a collaborative storytelling experience. An AI Game Master dynamically crafts your adventure based on your group's choices, creating branching narratives and unexpected challenges unique to each playthrough.
+Gather 2-10 players and embark on a collaborative storytelling experience. An AI Game Master dynamically crafts your adventure based on your group's choices, creating branching narratives and unexpected challenges unique to each playthrough.
 
 ## Features
 
 - **AI-Powered Storytelling** - A living narrative that adapts to your decisions
-- **Multiplayer Party System** - 2-4 players cooperate in turn-based gameplay
+- **Multiplayer Party System** - 2-10 players cooperate in turn-based gameplay
 - **Dynamic Choices** - Every decision shapes your journey
 - **Unique Adventures** - No two playthroughs are the same
 
@@ -38,7 +38,7 @@ Gather 2-4 players and embark on a collaborative storytelling experience. An AI 
 
 ## How to Play
 
-1. Gather your party of 2-4 players
+1. Gather your party of 2-10 players
 2. The AI Game Master sets the scene
 3. Take turns making decisions as a group
 4. Watch your unique story unfold

@@ -82,7 +82,9 @@ class RoomManager:
             phase=room.phase,
             story_history=room.story_history,
             player_inputs=room.player_inputs,
-            max_turns=room.max_turns
+            max_turns=room.max_turns,
+            input_phase_start_time=room.input_phase_start_time,
+            timed_out_players=room.timed_out_players
         )
     
     
@@ -208,12 +210,61 @@ class RoomManager:
         """Set game phase"""
         room = self.get_room(room_id)
         room.phase = phase
+
+        # Start input phase timer
+        if phase == GamePhase.PLAYER_INPUT:
+            room.input_phase_start_time = datetime.now()
+            room.timed_out_players = []  # Reset timeout tracking
+
         room.update_activity()
         self.storage.save_room(room)
         logger.debug(f"Room {room_id} phase changed to {phase}")
-    
-    
-    
+
+    def handle_input_timeout(self, room_id: str) -> None:
+        """
+        Handle input phase timeout
+
+        - Identifies players who haven't submitted
+        - Marks them as timed out
+        - Advances to voting phase with only submitted inputs
+        """
+        room = self.get_room(room_id)
+
+        # Validate phase
+        if room.phase != GamePhase.PLAYER_INPUT:
+            raise InvalidGamePhaseError(
+                f"Cannot handle timeout - current phase is {room.phase}",
+                details="Timeout only applies to PLAYER_INPUT phase"
+            )
+
+        # Find players who submitted
+        submitted_players = [inp.player_name for inp in room.player_inputs]
+
+        # Identify timed out players
+        room.timed_out_players = [
+            player for player in room.players
+            if player not in submitted_players
+        ]
+
+        logger.info(
+            f"Input timeout in room {room_id}: {len(room.timed_out_players)} player(s) timed out"
+        )
+
+        # Advance to voting if at least one player submitted
+        if len(room.player_inputs) > 0:
+            room.phase = GamePhase.VOTING
+            room.update_activity()
+            self.storage.save_room(room)
+            logger.info(
+                f"Advanced to voting with {len(room.player_inputs)} inputs in room {room_id}"
+            )
+        else:
+            # If no one submitted, skip voting and advance turn
+            logger.warning(f"No inputs submitted in room {room_id}, advancing turn")
+            self.advance_turn(room_id)
+
+
+
     # Story management
 
     def add_story_segment(self, room_id: str, content: str, winning_player: Optional[str] = None) -> None:
@@ -295,7 +346,7 @@ class RoomManager:
     def cast_vote(self, room_id: str, voter: str, chosen_player: str) -> None:
         """
         Cast vote for a player's input
-        
+
         Raises:
             RoomNotFoundError: Room doesn't exist
             PlayerNotInRoomError: Voter not in room
@@ -303,18 +354,24 @@ class RoomManager:
             VotingError: Invalid vote (voting for self, player doesn't exist, etc.)
         """
         room = self.get_room(room_id)
-        
+
         # Validate phase
         if room.phase != GamePhase.VOTING:
             raise InvalidGamePhaseError(
                 f"Cannot vote - current phase is {room.phase}",
                 details="Voting only allowed during VOTING phase"
             )
-        
+
         # Validate voter
         if voter not in room.players:
             raise PlayerNotInRoomError(f"Voter '{voter}' not in room {room_id}")
-        
+
+        # Check if voter timed out (can't vote if you didn't submit)
+        if voter in room.timed_out_players:
+            raise VotingError(
+                "Cannot vote - you did not submit an input during the input phase"
+            )
+
         # Can't vote for yourself
         if voter == chosen_player:
             raise VotingError("Cannot vote for your own input")

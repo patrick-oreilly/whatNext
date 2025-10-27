@@ -55,6 +55,8 @@ class GameRoom(BaseModel):
     last_activity: datetime = Field(default_factory=datetime.now)
     created_at: datetime = Field(default_factory=datetime.now)
     max_turns: int = 10
+    input_phase_start_time: Optional[datetime] = None  # Track when input phase started
+    timed_out_players: List[str] = []  # Track players who timed out
 
     class Config:
         use_enum_values = True
@@ -66,19 +68,34 @@ class GameRoom(BaseModel):
     def is_full(self, max_players: int) -> bool:
         """Check if a room is at max capacity"""
         return len(self.players) >= max_players
-    
+
     def can_start(self, min_players:int) -> bool:
         """Check if a room has enough players to start"""
         return len(self.players) >= min_players
-    
+
     def is_idle(self, timeout_mins: int) -> bool:
         """Check if a room has been idle too long"""
         idle_time = (datetime.now() - self.last_activity).total_seconds() / 60
         return idle_time > timeout_mins
-    
+
     def should_end_game(self) -> bool:
         """Check if the game should end"""
         return self.turn >= self.max_turns
+
+    def is_input_phase_timed_out(self, timeout_seconds: int) -> bool:
+        """Check if input phase has exceeded timeout"""
+        if not self.input_phase_start_time:
+            return False
+        elapsed = (datetime.now() - self.input_phase_start_time).total_seconds()
+        return elapsed >= timeout_seconds
+
+    def get_input_time_remaining(self, timeout_seconds: int) -> float:
+        """Get remaining time in input phase (seconds)"""
+        if not self.input_phase_start_time:
+            return timeout_seconds
+        elapsed = (datetime.now() - self.input_phase_start_time).total_seconds()
+        remaining = timeout_seconds - elapsed
+        return max(0, remaining)
     
 # API REQUEST MODELS
 
@@ -127,6 +144,8 @@ class RoomStateResponse(BaseModel):
     story_history: List[StorySegment]
     player_inputs: List[PlayerInput]
     max_turns: int
+    input_phase_start_time: Optional[datetime] = None
+    timed_out_players: List[str] = []
 
     class Config:
         use_enum_values = True  

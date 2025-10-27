@@ -1,7 +1,7 @@
 ### **1. Storyline Selection**
 
-- Each player joins the lobby (2–4 players).
-- The group selects or is assigned a **storyline/theme** (e.g., “Lost in Space”, “Haunted Manor”, “Cyberpunk Heist”).
+- Each player joins the lobby (2–10 players).
+- The group selects or is assigned a **storyline/theme** (e.g., "Lost in Space", "Haunted Manor", "Cyberpunk Heist").
 - The base AI prompt is initialized with this storyline context.
 
 ---

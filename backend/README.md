@@ -14,7 +14,7 @@ gcloud run deploy whats-next-backend \
 ```
 ## Overview
 
-This backend provides a multiplayer game server where an AI Game Master creates interactive stories for 2-4 players. Players submit story continuation ideas, vote on their favorites, and watch as the AI weaves the winning choices into a dynamic narrative.
+This backend provides a multiplayer game server where an AI Game Master creates interactive stories for 2-10 players. Players submit story continuation ideas, vote on their favorites, and watch as the AI weaves the winning choices into a dynamic narrative.
 
 **Key Features:**
 - Real-time AI story generation using Gemini 2.0 Flash Live
@@ -141,7 +141,7 @@ Edit `backend/core/config.py` or set environment variables:
 |---------|---------|-------------|
 | `HOST` | `0.0.0.0` | Server host |
 | `PORT` | `8080` | Server port |
-| `MAX_PLAYERS` | `4` | Maximum players per room |
+| `MAX_PLAYERS` | `10` | Maximum players per room |
 | `MIN_PLAYERS` | `2` | Minimum players to start |
 | `MAX_TURNS` | `10` | Maximum story turns |
 | `IDLE_TIMEOUT_MINUTES` | `30` | Room cleanup timeout |
@@ -151,7 +151,7 @@ Edit `backend/core/config.py` or set environment variables:
 ## Game Flow
 
 1. **Create Room** - Host creates a room with a storyline
-2. **Players Join** - 2-4 players join using room code
+2. **Players Join** - 2-10 players join using room code
 3. **Start Game** - Host starts when ready
 4. **AI Opening** - AI generates opening scene (streamed)
 5. **Player Input** - All players submit story continuations

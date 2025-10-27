@@ -89,8 +89,13 @@ export const Game: React.FC = () => {
           input.voters.forEach(voter => uniqueVoters.add(voter));
         });
 
+        // Calculate eligible voters (exclude timed-out players who cannot vote)
+        const eligibleVoters = state.players.filter(
+          player => !(state.timed_out_players || []).includes(player)
+        );
+
         const totalVotes = state.player_inputs.reduce((sum, input) => sum + input.votes, 0);
-        const allVoted = uniqueVoters.size === state.players.length;
+        const allVoted = uniqueVoters.size === eligibleVoters.length;
 
         console.log('Vote check:', {
           phase: state.phase,
@@ -99,13 +104,16 @@ export const Game: React.FC = () => {
           uniqueVoters: Array.from(uniqueVoters),
           playerCount: state.players.length,
           players: state.players,
+          eligibleVoterCount: eligibleVoters.length,
+          eligibleVoters: eligibleVoters,
+          timedOutPlayers: state.timed_out_players,
           allVoted,
           hasResults: !!votingResults,
           playerInputs: state.player_inputs.map(i => ({ player: i.player_name, votes: i.votes, voters: i.voters }))
         });
 
         if (allVoted && !votingResults) {
-          console.log('✅ All players have voted! Fetching voting results...');
+          console.log('✅ All eligible players have voted! Fetching voting results...');
           // Fetch voting results
           fetchVotingResults();
         }
