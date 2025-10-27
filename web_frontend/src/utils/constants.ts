@@ -5,7 +5,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 
 // Game settings
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = 10;
 export const MIN_TURNS = 5;
 export const MAX_TURNS = 20;
 export const DEFAULT_TURNS = 10;

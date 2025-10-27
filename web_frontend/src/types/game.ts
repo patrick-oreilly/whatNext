@@ -61,4 +61,6 @@ export interface RoomState {
   story_history: StorySegment[];
   player_inputs: PlayerInput[];
   max_turns: number;
+  input_phase_start_time?: string | null;
+  timed_out_players?: string[];
 }

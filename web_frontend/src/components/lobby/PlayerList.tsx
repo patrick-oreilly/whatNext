@@ -11,7 +11,7 @@ interface PlayerListProps {
 export const PlayerList: React.FC<PlayerListProps> = ({
   players,
   currentPlayer,
-  maxPlayers = 4,
+  maxPlayers = 10,
 }) => {
   const emptySlots = maxPlayers - players.length;
 

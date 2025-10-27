@@ -8,6 +8,7 @@ import { StoryDisplay } from '../components/game/StoryDisplay';
 import { PlayerInput } from '../components/game/PlayerInput';
 import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
+import { InputTimer } from '../components/game/InputTimer';
 import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
@@ -29,6 +30,8 @@ export const Game: React.FC = () => {
   const [votingResults, setVotingResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
+  const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
+  const [timedOutPlayers, setTimedOutPlayers] = useState<string[]>([]);
 
   // Extract decision prompt and status from the last story segment
   const currentDecisionData = useMemo(() => {
@@ -49,6 +52,12 @@ export const Game: React.FC = () => {
     try {
       const state = await roomsApi.getRoomState(roomId);
       setRoomState(state);
+
+      // Update timer information
+      if (state.phase === GamePhase.PLAYER_INPUT) {
+        setTimerStartTime(state.input_phase_start_time || null);
+        setTimedOutPlayers(state.timed_out_players || []);
+      }
 
       // Check if phase changed
       if (state.phase === GamePhase.GAME_OVER) {
@@ -194,6 +203,17 @@ export const Game: React.FC = () => {
     }
   };
 
+  const handleInputTimeout = async () => {
+    if (!roomId) return;
+
+    try {
+      await gameplayApi.triggerInputTimeout(roomId);
+      await fetchRoomState();
+    } catch (err: any) {
+      console.error('Failed to handle timeout:', err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -299,6 +319,17 @@ export const Game: React.FC = () => {
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
+                    {/* Timer Display */}
+                    {timerStartTime && (
+                      <div className="mb-6">
+                        <InputTimer
+                          startTime={timerStartTime}
+                          timeoutSeconds={120}
+                          onTimeout={handleInputTimeout}
+                        />
+                      </div>
+                    )}
+
                     <h2 className="text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
                       What Next?
                     </h2>
@@ -338,6 +369,15 @@ export const Game: React.FC = () => {
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
+                    {/* Show timed out players */}
+                    {timedOutPlayers.length > 0 && (
+                      <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
+                        <p className="text-accent-white font-bold text-center">
+                          ⏰ {timedOutPlayers.join(', ')} did not submit in time
+                        </p>
+                      </div>
+                    )}
+
                     <h2 className="text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
                       {showResults ? 'Voting Results' : 'Vote For The Best Option'}
                     </h2>

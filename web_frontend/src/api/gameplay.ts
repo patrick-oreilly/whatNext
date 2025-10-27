@@ -41,4 +41,27 @@ export const gameplayApi = {
     const response = await apiClient.post<AdvanceTurnResponse>(`/api/turn/advance/${roomId}`);
     return response.data;
   },
+
+  /**
+   * Trigger input phase timeout
+   */
+  triggerInputTimeout: async (roomId: string): Promise<{ status: string; room_id: string; phase: string }> => {
+    const response = await apiClient.post<{ status: string; room_id: string; phase: string }>(`/api/rooms/${roomId}/timeout`);
+    return response.data;
+  },
+
+  /**
+   * Get timer status
+   */
+  getTimerStatus: async (roomId: string): Promise<{
+    active: boolean;
+    time_remaining?: number;
+    has_timed_out?: boolean;
+    submitted_count?: number;
+    total_players?: number;
+    timed_out_players?: string[];
+  }> => {
+    const response = await apiClient.get(`/api/rooms/${roomId}/timer`);
+    return response.data;
+  },
 };

@@ -79,7 +79,7 @@ export const Home: React.FC = () => {
             <span className="text-4xl">🎮</span>
             <div className="text-left">
               <h4 className="font-black text-accent-white text-lg uppercase mb-2">Multiplayer</h4>
-              <p className="text-accent-white font-semibold">2-4 players in real-time</p>
+              <p className="text-accent-white font-semibold">2-10 players in real-time</p>
             </div>
           </div>
           <div className="flex items-start space-x-4 bg-accent-black p-6 rounded-lg border-4 border-accent-white">
