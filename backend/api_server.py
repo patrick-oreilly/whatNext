@@ -367,63 +367,107 @@ async def advance_turn(room_id: str):
 
 # AI STREAMING ENDPOINT
 
+# Track active streams to prevent concurrent access to same session
+active_streams = {}
+active_streams_lock = asyncio.Lock()
+
 @app.get("/api/story/stream/{room_id}")
 async def stream_story(room_id: str):
     """
     Stream AI-generated story content
-    
+
     Uses Server-Sent Events (SSE) format
-    
+
     Returns:
     - Text chunks as they're generated
     - [DONE] when complete
     - [ERROR] if generation fails
-    
+
     Decision 3: Implements automatic retry on failure
+    Prevents concurrent streams for the same room
     """
     room = room_manager.get_room(room_id)
-    
+
+    # Check if stream is already active for this room
+    async with active_streams_lock:
+        if room_id in active_streams:
+            logger.warning(f"Stream already active for room {room_id}, waiting for completion")
+            # Return cached response if available
+            if "response" in active_streams[room_id]:
+                async def replay_generator():
+                    cached = active_streams[room_id]["response"]
+                    for chunk in cached:
+                        yield f"data: {chunk}\n\n"
+                        await asyncio.sleep(0.01)
+                    yield "data: [DONE]\n\n"
+
+                return StreamingResponse(
+                    replay_generator(),
+                    media_type="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "X-Accel-Buffering": "no",
+                    }
+                )
+
+        # Mark stream as active
+        active_streams[room_id] = {"response": []}
+
     async def event_generator():
         """Generate Server-Sent Events"""
         try:
             full_response = ""
-            
+            chunks = []
+
             # Stream from ADK with retry logic (Decision 3)
             async for chunk in session_manager.stream_response(room_id):
                 full_response += chunk
-                
+                chunks.append(chunk)
+
                 # Send chunk to client
                 yield f"data: {chunk}\n\n"
-                
+
                 # Small delay for smooth streaming
                 await asyncio.sleep(0.01)
-            
+
+            # Store cached chunks for late joiners
+            async with active_streams_lock:
+                if room_id in active_streams:
+                    active_streams[room_id]["response"] = chunks
+
             # Store complete story segment
             room_manager.add_story_segment(
                 room_id=room_id,
                 content=full_response,
                 winning_player=None  # Set by voting results
             )
-            
+
             # Check if this was turn 1 (opening) or continuation
             room = room_manager.get_room(room_id)
-            
+
             if room.turn == 1:
                 # After opening, move to player input
                 room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
             else:
                 # After continuation, move to player input for next turn
                 room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
-            
+
             # Signal completion
             yield "data: [DONE]\n\n"
-            
+
             logger.info(f"Story streaming completed for room {room_id}, turn {room.turn}")
-            
+
         except Exception as e:
             logger.error(f"Error streaming story for room {room_id}: {e}")
             yield f"data: [ERROR] {str(e)}\n\n"
-    
+        finally:
+            # Clean up after a delay to allow late joiners
+            await asyncio.sleep(5)
+            async with active_streams_lock:
+                if room_id in active_streams:
+                    del active_streams[room_id]
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",

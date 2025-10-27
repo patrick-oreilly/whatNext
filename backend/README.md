@@ -2,6 +2,16 @@
 
 AI-powered collaborative storytelling game backend built with FastAPI and Google ADK (Agent Development Kit).
 
+## Deployment command from root
+
+```
+gcloud run deploy whats-next-backend \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars GOOGLE_API_KEY=A
+```
 ## Overview
 
 This backend provides a multiplayer game server where an AI Game Master creates interactive stories for 2-4 players. Players submit story continuation ideas, vote on their favorites, and watch as the AI weaves the winning choices into a dynamic narrative.

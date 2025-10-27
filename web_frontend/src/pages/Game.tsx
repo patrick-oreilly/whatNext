@@ -28,6 +28,7 @@ export const Game: React.FC = () => {
   const [hasVoted, setHasVoted] = useState(false);
   const [votingResults, setVotingResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
+  const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
 
   // Extract decision prompt and status from the last story segment
   const currentDecisionData = useMemo(() => {
@@ -64,6 +65,11 @@ export const Game: React.FC = () => {
         setHasVoted(false);
         setVotingResults(null);
         setShowResults(false);
+      }
+
+      // Reset streaming turn tracker when advancing to next turn
+      if (state.turn !== roomState?.turn) {
+        setLastStreamedTurn(null);
       }
 
       // Check if all players have voted
@@ -114,10 +120,17 @@ export const Game: React.FC = () => {
 
   // Start streaming when phase is GENERATING_STORY
   useEffect(() => {
-    if (roomState?.phase === GamePhase.GENERATING_STORY && !isStreaming && roomId) {
+    if (
+      roomState?.phase === GamePhase.GENERATING_STORY &&
+      !isStreaming &&
+      roomId &&
+      roomState.turn !== lastStreamedTurn
+    ) {
+      console.log(`Starting stream for room ${roomId}, turn ${roomState.turn}`);
       startStream(roomId);
+      setLastStreamedTurn(roomState.turn);
     }
-  }, [roomState?.phase, roomId]);
+  }, [roomState?.phase, roomState?.turn, roomId, isStreaming, lastStreamedTurn, startStream]);
 
   const handleSubmitInput = async (text: string) => {
     if (!roomId || !currentPlayer) return;

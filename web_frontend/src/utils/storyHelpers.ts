@@ -12,7 +12,8 @@ export const extractDecisionPrompt = (text: string): string | null => {
 
   // Match text after [DECISION] or [DESCISON] (typo) marker
   // Use both patterns to handle backend inconsistency
-  const match = text.match(/\[(DECISION|DESCISON)\]\s*(.+?)(?:\[|$)/s);
+  // Stop at next bracket, Status: marker, or end of string
+  const match = text.match(/\[(DECISION|DESCISON)\]\s*(.+?)(?:\[|Status:|$)/is);
 
   if (match && match[2]) {
     return match[2].trim();
