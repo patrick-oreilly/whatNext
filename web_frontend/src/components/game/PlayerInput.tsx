@@ -1,0 +1,113 @@
+// Player input component for story continuation
+
+import React, { useState, useEffect } from 'react';
+import { Button } from '../common';
+import { validatePlayerInput } from '../../utils/validation';
+import { MIN_INPUT_LENGTH, MAX_INPUT_LENGTH } from '../../utils/constants';
+
+interface PlayerInputProps {
+  onSubmit: (text: string) => Promise<void>;
+  hasSubmitted: boolean;
+  submissionCount: number;
+  totalPlayers: number;
+}
+
+export const PlayerInput: React.FC<PlayerInputProps> = ({
+  onSubmit,
+  hasSubmitted,
+  submissionCount,
+  totalPlayers,
+}) => {
+  const [input, setInput] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (hasSubmitted) {
+      setInput('');
+    }
+  }, [hasSubmitted]);
+
+  const handleSubmit = async () => {
+    const validationError = validatePlayerInput(input);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await onSubmit(input.trim());
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit input');
+      setIsSubmitting(false);
+    }
+  };
+
+  const remainingChars = MAX_INPUT_LENGTH - input.length;
+  const charCountColor = remainingChars < 50 ? 'text-primary' : 'text-accent-white text-opacity-60';
+
+  return (
+    <div>
+      {hasSubmitted ? (
+        <div>
+          <div className="bg-primary bg-opacity-20 border-4 border-primary rounded-lg p-6 mb-6">
+            <div className="flex items-center space-x-3 text-primary mb-4">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="font-black uppercase text-lg tracking-wide">Submitted!</span>
+            </div>
+            <p className="text-accent-white font-semibold text-base leading-relaxed whitespace-pre-wrap">
+              {input}
+            </p>
+          </div>
+
+          <div className="bg-accent-white bg-opacity-10 p-4 rounded-lg text-center">
+            <p className="text-accent-white font-bold text-lg uppercase tracking-wide">
+              Waiting for others... ({submissionCount}/{totalPlayers} submitted)
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Describe what happens next in the story..."
+            className="w-full h-40 p-4 bg-accent-white bg-opacity-10 border-4 border-accent-white rounded-lg text-accent-white font-semibold text-base placeholder-accent-white placeholder-opacity-40 focus:ring-4 focus:ring-primary focus:border-primary resize-none"
+            maxLength={MAX_INPUT_LENGTH}
+          />
+
+          <div className="flex justify-between items-center mt-3 text-sm">
+            <span className={`font-bold uppercase tracking-wide ${charCountColor}`}>
+              {remainingChars} characters remaining
+            </span>
+            <span className="text-accent-white text-opacity-60 font-bold uppercase tracking-wide">
+              Min: {MIN_INPUT_LENGTH} characters
+            </span>
+          </div>
+
+          {error && (
+            <div className="mt-3 p-3 bg-red-600 border-2 border-accent-white rounded-lg">
+              <p className="text-accent-white font-bold uppercase text-center">{error}</p>
+            </div>
+          )}
+
+          <Button
+            fullWidth
+            onClick={handleSubmit}
+            loading={isSubmitting}
+            disabled={input.trim().length < MIN_INPUT_LENGTH}
+            className="mt-6"
+            size="lg"
+          >
+            Submit Your Idea
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
