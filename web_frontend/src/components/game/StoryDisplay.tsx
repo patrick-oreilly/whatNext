@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { StorySegment } from '../../types';
+import { cleanStoryText } from '../../utils/storyHelpers';
 
 interface StoryDisplayProps {
   segments: StorySegment[];
@@ -52,7 +53,7 @@ export const StoryDisplay: React.FC<StoryDisplayProps> = ({
                   blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
                 }}
               >
-                {segment.content}
+                {cleanStoryText(segment.content)}
               </ReactMarkdown>
             </div>
           </div>
@@ -80,7 +81,7 @@ export const StoryDisplay: React.FC<StoryDisplayProps> = ({
                   blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
                 }}
               >
-                {streamingText}
+                {cleanStoryText(streamingText)}
               </ReactMarkdown>
               <span className="inline-block w-2 h-6 bg-primary animate-pulse ml-1 rounded" />
             </div>

@@ -1,18 +1,20 @@
 // Main Game page - 3-Screen Flow
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Spinner } from '../components/common';
 import { PlayerStatus } from '../components/game/PlayerStatus';
 import { StoryDisplay } from '../components/game/StoryDisplay';
 import { PlayerInput } from '../components/game/PlayerInput';
 import { VotingPanel } from '../components/game/VotingPanel';
+import { StatusDisplay } from '../components/game/StatusDisplay';
 import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
 import { useSSE, usePolling } from '../hooks';
 import { GamePhase } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
+import { extractDecisionPrompt, extractStatus, cleanStoryText } from '../utils/storyHelpers';
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -26,6 +28,18 @@ export const Game: React.FC = () => {
   const [hasVoted, setHasVoted] = useState(false);
   const [votingResults, setVotingResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
+
+  // Extract decision prompt and status from the last story segment
+  const currentDecisionData = useMemo(() => {
+    if (roomState?.story_history && roomState.story_history.length > 0) {
+      const lastSegment = roomState.story_history[roomState.story_history.length - 1];
+      return {
+        decision: extractDecisionPrompt(lastSegment.content),
+        status: extractStatus(lastSegment.content)
+      };
+    }
+    return { decision: null, status: null };
+  }, [roomState?.story_history]);
 
   // Fetch room state
   const fetchRoomState = async () => {
@@ -273,7 +287,7 @@ export const Game: React.FC = () => {
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
                     <h2 className="text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
-                      What Happens Next?
+                      What Next?
                     </h2>
                     <div className="h-1 w-full bg-primary rounded mb-6"></div>
 
@@ -281,14 +295,17 @@ export const Game: React.FC = () => {
                     {roomState.story_history.length > 0 && (
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6">
                         <p className="text-accent-white font-semibold text-lg leading-relaxed">
-                          {roomState.story_history[roomState.story_history.length - 1].content}
+                          {cleanStoryText(roomState.story_history[roomState.story_history.length - 1].content)}
                         </p>
                       </div>
                     )}
 
+                    {/* Status display (if present) */}
+                    <StatusDisplay status={currentDecisionData.status} />
+
                     <div className="text-center mb-8">
                       <p className="text-2xl font-black text-accent-white uppercase tracking-wide">
-                        What will the character do next?
+                        {currentDecisionData.decision || "What will the character do next?"}
                       </p>
                     </div>
                   </div>
@@ -315,11 +332,16 @@ export const Game: React.FC = () => {
 
                     {/* Decision Reminder */}
                     {!showResults && (
-                      <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6">
-                        <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide">
-                          "What will the character do next?"
-                        </p>
-                      </div>
+                      <>
+                        {/* Status display (if present) */}
+                        <StatusDisplay status={currentDecisionData.status} />
+
+                        <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6">
+                          <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide">
+                            "{currentDecisionData.decision || "What will the character do next?"}"
+                          </p>
+                        </div>
+                      </>
                     )}
                   </div>
 
