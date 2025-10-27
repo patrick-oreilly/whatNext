@@ -10,7 +10,12 @@ class Settings:
     # API Settings
     HOST: str = "0.0.0.0"
     PORT: int = 8080
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",  # Vite default dev server
+        "http://localhost:5174",
+        "*"  # Allow all for now - update with specific frontend URL after deployment
+    ]
     
     # Game Settings
     MAX_PLAYERS: int = 4
