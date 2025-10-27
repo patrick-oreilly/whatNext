@@ -336,11 +336,11 @@ class RoomManager:
                     inp.voters.remove(voter)
                     inp.votes -= 1
 
-            # Add vote
-            if not hasattr(chosen_input, 'voters'):
-                chosen_input.voters = []
-            chosen_input.voters.append(voter)
-            chosen_input.votes += 1
+        # Add vote
+        if not hasattr(chosen_input, 'voters'):
+            chosen_input.voters = []
+        chosen_input.voters.append(voter)
+        chosen_input.votes += 1
                     
         room.update_activity()
         self.storage.save_room(room)
@@ -361,9 +361,9 @@ class RoomManager:
         
         # Find input with most votes
         winning_input = max(room.player_inputs, key=lambda inp: inp.votes)
-        
-        # Award points
-        room.scores[winning_input.player_name] += winning_input.votes
+
+        # Award points (15 points per vote)
+        room.scores[winning_input.player_name] += winning_input.votes * 15
         
         # Build vote counts
         vote_counts = {
