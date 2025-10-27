@@ -50,25 +50,38 @@ class SessionManager:
     
   
     # Session lifecycle
-    async def create_session(self, room_id: str, user_id: str = "player") -> SessionData:
+    
+    async def create_session(self, room_id: str, storyline_prompt: str, user_id: str = "player") -> SessionData:
         """
         Create new ADK session for a room
-        
+
         Args:
             room_id: Unique room identifier
+            storyline_prompt: The storyline-specific system prompt for the agent
             user_id: User identifier for ADK
-            
+
         Returns:
             SessionData containing session info
-            
+
         Raises:
             SessionError: If session creation fails
         """
         try:
-            # Create runner
+            from google.adk.agents import LlmAgent
+            from backend.core.config import settings
+
+            # Create storyline-specific agent with the correct instruction
+            storyline_agent = LlmAgent(
+                model=settings.MODEL_NAME,
+                name='story_agent',
+                description='A game master that creates stories for players.',
+                instruction=storyline_prompt,
+            )
+
+            # Create runner with storyline-specific agent
             runner = InMemoryRunner(
                 app_name="What Next App",
-                agent=root_agent,
+                agent=storyline_agent,
             )
             
             # Create ADK session
@@ -138,10 +151,7 @@ class SessionManager:
         
         return session_data.message_count >= max_turns
     
-    # ========================================================================
-    # MESSAGE SENDING
-    # ========================================================================
-    
+    # Send message 
     def send_message(self, room_id: str, message: str) -> None:
         """
         Send message to ADK session

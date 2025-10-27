@@ -10,5 +10,5 @@ root_agent = LlmAgent(
     model=settings.MODEL_NAME,
     name='root_agent',
     description='A game master that can create a story for a group of players.',
-    instruction=BASE_PROMPT + HOOP_DREAMS_PROMPT,
+    instruction=BASE_PROMPT,
 )

@@ -24,11 +24,13 @@ class StoryGenerator:
         if storyline == StoryLineType.HOOP_DREAMS:
             return prompts.HOOP_DREAMS_PROMPT
         elif storyline == StoryLineType.SPACE_EXPLORATION:
-            return prompts.BASE_PROMPT  # TODO: Add space exploration prompt
+            return prompts.SPACE_EXPLORATION
         elif storyline == StoryLineType.HAUNTED_MANSION:
-            return prompts.BASE_PROMPT  # TODO: Add haunted mansion prompt
+            return prompts.HAUNTED_MANSION
         elif storyline == StoryLineType.CASINO_HEIST:
-            return prompts.BASE_PROMPT  # TODO: Add casino heist prompt
+            return prompts.CASINO_HEIST
+        elif storyline == StoryLineType.CUSTOM_STORYLINE:
+            return ""
         else:
             return prompts.BASE_PROMPT
 

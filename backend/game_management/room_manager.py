@@ -336,12 +336,12 @@ class RoomManager:
                     inp.voters.remove(voter)
                     inp.votes -= 1
 
-        # Add vote to chosen input
-        if not hasattr(chosen_input, 'voters'):
-            chosen_input.voters = []
-        chosen_input.voters.append(voter)
-        chosen_input.votes += 1
-
+            # Add vote
+            if not hasattr(chosen_input, 'voters'):
+                chosen_input.voters = []
+            chosen_input.voters.append(voter)
+            chosen_input.votes += 1
+                    
         room.update_activity()
         self.storage.save_room(room)
         
@@ -422,6 +422,7 @@ class RoomManager:
     
     
     # Function for generating the room id
+    
     def _generate_room_id(self) -> str:
         """Generate unique 6-character room ID"""
         chars = string.ascii_uppercase + string.digits

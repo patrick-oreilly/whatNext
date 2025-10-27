@@ -21,11 +21,6 @@ This backend provides a multiplayer game server where an AI Game Master creates 
 - **Pydantic** - Data validation
 - **Python 3.13+**
 
-## Prerequisites
-
-- Python 3.13 or higher
-- Google API Key (for Gemini API access)
-
 ## Setup
 
 ### 1. Create Virtual Environment
@@ -49,11 +44,6 @@ Create a `.env` file in the `backend/` directory:
 ```bash
 GOOGLE_API_KEY=your_google_api_key_here
 ```
-
-**Where to get your API key:**
-- Visit [Google AI Studio](https://aistudio.google.com/apikey)
-- Create or select a project
-- Generate an API key for Gemini
 
 ## Running the Server
 
