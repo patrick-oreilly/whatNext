@@ -18,28 +18,20 @@ from backend.core.storage import create_storage
 from backend.core.errors import register_exception_handlers
 from backend.core.config import settings
 
-# ============================================================================
-# LOGGING SETUP
-# ============================================================================
-
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# ============================================================================
-# GLOBAL MANAGERS
-# ============================================================================
+# Global managers
 
 storage = create_storage(settings.STORAGE_TYPE)
 room_manager = RoomManager(storage)
 session_manager = SessionManager()
 story_generator = StoryGenerator()
 
-# ============================================================================
-# BACKGROUND TASKS
-# ============================================================================
+# Background tasks
 
 async def cleanup_task():
     """Background task to cleanup idle rooms"""
@@ -52,9 +44,7 @@ async def cleanup_task():
         except Exception as e:
             logger.error(f"Error in cleanup task: {e}")
 
-# ============================================================================
-# APPLICATION LIFECYCLE
-# ============================================================================
+# App lifecycle
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -91,10 +81,7 @@ async def lifespan(app: FastAPI):
     
     logger.info("✅ Shutdown complete")
 
-# ============================================================================
-# FASTAPI APP
-# ============================================================================
-
+#FastAPI app
 app = FastAPI(
     title="What's Next - Game Master API",
     description="AI-powered collaborative storytelling game backend",
@@ -114,9 +101,7 @@ app.add_middleware(
 # Register custom exception handlers
 register_exception_handlers(app)
 
-# ============================================================================
-# HEALTH & STATUS ENDPOINTS
-# ============================================================================
+# Health and status endpoints
 
 @app.get("/", response_model=HealthResponse)
 async def root():
@@ -144,9 +129,7 @@ async def list_rooms():
         "count": len(room_manager.list_rooms())
     }
 
-# ============================================================================
-# ROOM MANAGEMENT ENDPOINTS
-# ============================================================================
+# Room management end points
 
 @app.post("/api/rooms/create", response_model=RoomCreatedResponse)
 async def create_room(request: CreateRoomRequest):
@@ -203,16 +186,17 @@ async def start_game(room_id: str):
     """
     # Validate and start game
     room_manager.start_game(room_id)
-    
-    # Create ADK session for this room
-    await session_manager.create_session(room_id, user_id=room_id)
-    
-    # Get opening prompt
+
+    # Get room and storyline prompt
     room = room_manager.get_room(room_id)
-    opening_prompt = story_generator.generate_opening_prompt(room.storyline)
-    
-    # Send opening prompt to AI (will be streamed via /stream endpoint)
-    session_manager.send_message(room_id, opening_prompt)
+    storyline_prompt = story_generator.get_storyline_prompt(room.storyline)
+
+    # Create ADK session with storyline-specific agent
+    await session_manager.create_session(room_id, storyline_prompt=storyline_prompt, user_id=room_id)
+
+    # Send initial message to start the story
+    initial_message = "Begin the story. Give me the opening scene and first decision."
+    session_manager.send_message(room_id, initial_message)
     
     logger.info(f"Game started in room {room_id}")
     
@@ -251,10 +235,7 @@ async def delete_room(room_id: str):
     
     return {"status": "deleted", "room_id": room_id}
 
-# ============================================================================
-# GAMEPLAY ENDPOINTS
-# ============================================================================
-
+# Gameplay endpoints
 @app.post("/api/input/submit")
 async def submit_input(request: SubmitInputRequest):
     """
@@ -384,9 +365,7 @@ async def advance_turn(room_id: str):
         "phase": GamePhase.GENERATING_STORY
     }
 
-# ============================================================================
 # AI STREAMING ENDPOINT
-# ============================================================================
 
 @app.get("/api/story/stream/{room_id}")
 async def stream_story(room_id: str):
@@ -455,9 +434,8 @@ async def stream_story(room_id: str):
         }
     )
 
-# ============================================================================
+
 # UTILITY ENDPOINTS
-# ============================================================================
 
 @app.get("/api/sessions/active")
 async def get_active_sessions():
@@ -487,9 +465,6 @@ async def trigger_cleanup():
         "rooms_deleted": deleted
     }
 
-# ============================================================================
-# MAIN
-# ============================================================================
 
 if __name__ == "__main__":
     import uvicorn
