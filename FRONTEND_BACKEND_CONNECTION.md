@@ -41,7 +41,7 @@ gcloud run deploy whats-next-backend \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GOOGLE_API_KEY=AIzaSyD1cEJwyWjwgHNfQ14dHXnfecY4oEOpLbU
+  --set-env-vars GOOGLE_API_KEY=
 ```
 
 ### Step 2: Run Frontend Locally to Test

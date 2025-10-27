@@ -86,7 +86,7 @@ gcloud run deploy whats-next-backend \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GOOGLE_API_KEY=AIzaSyD1cEJwyWjwgHNfQ14dHXnfecY4oEOpLbU
+  --set-env-vars GOOGLE_API_KEY=
 ```
 
 ---
