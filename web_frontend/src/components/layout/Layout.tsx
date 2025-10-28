@@ -3,6 +3,8 @@
 import React from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { Analytics } from "@vercel/analytics/react"
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +18,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {children}
       </main>
       <Footer />
+      <Analytics />
     </div>
   );
 };
