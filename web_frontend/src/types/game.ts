@@ -15,6 +15,7 @@ export const StoryLineType = {
   SPACE_EXPLORATION: 'space_exploration',
   CASINO_HEIST: 'casino_heist',
   HAUNTED_MANSION: 'haunted_mansion',
+  SUNFLOWER_WEST: 'sunflower_west',
   CUSTOM_STORYLINE: 'custom_storyline'
 } as const;
 
@@ -25,6 +26,7 @@ export const STORYLINE_LABELS: Record<StoryLineType, string> = {
   [StoryLineType.SPACE_EXPLORATION]: 'Space Exploration',
   [StoryLineType.CASINO_HEIST]: 'Casino Heist',
   [StoryLineType.HAUNTED_MANSION]: 'Haunted Mansion',
+  [StoryLineType.SUNFLOWER_WEST]: 'Sunflower West',
   [StoryLineType.CUSTOM_STORYLINE]: 'Custom Storyline',
 };
 
@@ -33,6 +35,7 @@ export const STORYLINE_DESCRIPTIONS: Record<StoryLineType, string> = {
   [StoryLineType.SPACE_EXPLORATION]: 'Explore the cosmos and encounter alien civilizations',
   [StoryLineType.CASINO_HEIST]: 'Plan and execute the perfect casino heist',
   [StoryLineType.HAUNTED_MANSION]: 'Uncover the secrets of a mysterious haunted mansion',
+    [StoryLineType.SUNFLOWER_WEST]: 'Rise from sult gigs to music stardom as Galway icon Jack McBrinn',
   [StoryLineType.CUSTOM_STORYLINE]: 'Create your own unique adventure',
 };
 

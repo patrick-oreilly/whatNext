@@ -29,6 +29,8 @@ class StoryGenerator:
             return prompts.HAUNTED_MANSION
         elif storyline == StoryLineType.CASINO_HEIST:
             return prompts.CASINO_HEIST
+        elif storyline == StoryLineType.SUNFLOWER_WEST:
+            return prompts.SUNFLOWER_PLOTLINE
         elif storyline == StoryLineType.CUSTOM_STORYLINE:
             return ""
         else:

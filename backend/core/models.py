@@ -20,7 +20,9 @@ class StoryLineType(str, Enum):
     SPACE_EXPLORATION = "space_exploration"
     CASINO_HEIST = "casino_heist"
     HAUNTED_MANSION = "haunted_mansion"
+    SUNFLOWER_WEST = "sunflower_west"
     CUSTOM_STORYLINE = "custom_storyline"
+
     
 
 # Game state models

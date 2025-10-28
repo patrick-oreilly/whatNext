@@ -12,8 +12,8 @@ import { InputTimer } from '../components/game/InputTimer';
 import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
-import { useSSE, usePolling } from '../hooks';
-import { GamePhase } from '../types';
+import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
+import { GamePhase, StoryLineType } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
 import { extractDecisionPrompt, extractStatus, cleanStoryText } from '../utils/storyHelpers';
 
@@ -22,6 +22,16 @@ export const Game: React.FC = () => {
   const navigate = useNavigate();
   const { roomState, setRoomState, currentPlayer } = useGameStore();
   const { streamedText, isStreaming, startStream } = useSSE();
+
+  // Play background music for Sunflower West storyline
+  useBackgroundMusic({
+    audioPath: '/sunflower-west.mp3',
+    enabled: roomState?.storyline === StoryLineType.SUNFLOWER_WEST &&
+             roomState?.phase !== GamePhase.LOBBY &&
+             roomState?.phase !== GamePhase.GAME_OVER,
+    volume: 0.3,
+    loop: true,
+  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
