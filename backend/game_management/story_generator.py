@@ -65,17 +65,17 @@ class StoryGenerator:
     ) -> str:
         """
         Generate prompt for story continuation based on winning player input
-        
+
         Decision 2: We use ADK's built-in context, so we don't need to
         send full history - just the winning input and turn info.
-        
+
         Args:
             storyline: Type of story
             story_history: Previous story segments (for reference)
             winning_input: Player's winning continuation idea
             turn: Current turn number
             max_turns: Maximum turns before ending
-            
+
         Returns:
             Prompt text for AI
         """
@@ -99,6 +99,50 @@ class StoryGenerator:
         prompt = f"{formatted_input}{turn_info}{ending_instruction}"
 
         logger.info(f"Generated continuation prompt for turn {turn}/{max_turns}")
+        return prompt
+
+    def generate_natural_continuation_prompt(
+        self,
+        storyline: StoryLineType,
+        story_history: List[StorySegment],
+        turn: int,
+        max_turns: int
+    ) -> str:
+        """
+        Generate prompt for natural story continuation when no player input was submitted
+
+        Args:
+            storyline: Type of story
+            story_history: Previous story segments (for reference)
+            turn: Current turn number
+            max_turns: Maximum turns before ending
+
+        Returns:
+            Prompt text for AI to continue naturally
+        """
+        # Add explicit turn information for better pacing
+        turn_info = f"[Turn {turn} of {max_turns}]"
+
+        # Check if we should start wrapping up
+        is_near_end = turn >= (max_turns - 2)
+
+        if is_near_end:
+            ending_instruction = (
+                "\n\nIMPORTANT: The story is nearing its conclusion. "
+                "Begin wrapping up plot threads and moving toward a satisfying ending."
+            )
+        else:
+            ending_instruction = ""
+
+        # Instruction for natural continuation
+        natural_instruction = (
+            "Continue the story naturally, advancing the plot in a logical and engaging way. "
+            "Build on the previous events and maintain the established tone and pacing."
+        )
+
+        prompt = f"{natural_instruction}\n\n{turn_info}{ending_instruction}"
+
+        logger.info(f"Generated natural continuation prompt for turn {turn}/{max_turns}")
         return prompt
     
     def generate_final_prompt(

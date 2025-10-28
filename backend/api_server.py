@@ -360,12 +360,18 @@ async def get_voting_results(room_id: str):
 async def advance_turn(room_id: str):
     """
     Advance to next turn
-    """
-    # Get winning input
-    winning_input = room_manager.get_winning_input(room_id)
 
-    if not winning_input:
-        return {"error": "No winning input found"}
+    Handles three cases:
+    - Multiple inputs: Use winning input from voting
+    - Single input: Use that input directly (voting was skipped)
+    - No inputs: Generate natural continuation
+    """
+    room = room_manager.get_room(room_id)
+
+    # Determine if we have inputs and get winning input
+    winning_input = None
+    if len(room.player_inputs) > 0:
+        winning_input = room_manager.get_winning_input(room_id)
 
     # Advance turn
     room_manager.advance_turn(room_id)
@@ -385,21 +391,47 @@ async def advance_turn(room_id: str):
             "final_scores": room.scores
         }
 
-    # Generate continuation prompt
-    if story_generator.should_end_story(room.turn, room.max_turns):
-        prompt = story_generator.generate_final_prompt(
-            storyline=room.storyline,
-            story_history=room.story_history,
-            winning_input=winning_input
-        )
+    # Generate continuation prompt based on situation
+    if winning_input:
+        # Case 1 & 2: We have a winning input (either from voting or single submission)
+        if story_generator.should_end_story(room.turn, room.max_turns):
+            prompt = story_generator.generate_final_prompt(
+                storyline=room.storyline,
+                story_history=room.story_history,
+                winning_input=winning_input
+            )
+        else:
+            prompt = story_generator.generate_continuation_prompt(
+                storyline=room.storyline,
+                story_history=room.story_history,
+                winning_input=winning_input,
+                turn=room.turn,
+                max_turns=room.max_turns
+            )
+        logger.info(f"Generated continuation prompt with player input for room {room_id}")
     else:
-        prompt = story_generator.generate_continuation_prompt(
-            storyline=room.storyline,
-            story_history=room.story_history,
-            winning_input=winning_input,
-            turn=room.turn,
-            max_turns=room.max_turns
-        )
+        # Case 3: No inputs submitted - continue naturally
+        if story_generator.should_end_story(room.turn, room.max_turns):
+            # For final turn, still need natural continuation
+            prompt = story_generator.generate_natural_continuation_prompt(
+                storyline=room.storyline,
+                story_history=room.story_history,
+                turn=room.turn,
+                max_turns=room.max_turns
+            )
+            prompt += (
+                "\n\nFINAL TURN: This is the last turn. Bring the story to a "
+                "dramatic and satisfying conclusion that wraps up all major plot threads. "
+                "Make it memorable and impactful."
+            )
+        else:
+            prompt = story_generator.generate_natural_continuation_prompt(
+                storyline=room.storyline,
+                story_history=room.story_history,
+                turn=room.turn,
+                max_turns=room.max_turns
+            )
+        logger.info(f"Generated natural continuation prompt (no player inputs) for room {room_id}")
 
     # Store prompt for next stream call
     room.next_prompt = prompt

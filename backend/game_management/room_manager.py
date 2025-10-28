@@ -226,7 +226,9 @@ class RoomManager:
 
         - Identifies players who haven't submitted
         - Marks them as timed out
-        - Advances to voting phase with only submitted inputs
+        - Advances to voting phase with only submitted inputs (if multiple)
+        - Uses single submission directly (if only one)
+        - Generates natural continuation (if none)
         """
         room = self.get_room(room_id)
 
@@ -250,18 +252,38 @@ class RoomManager:
             f"Input timeout in room {room_id}: {len(room.timed_out_players)} player(s) timed out"
         )
 
-        # Advance to voting if at least one player submitted
-        if len(room.player_inputs) > 0:
+        # Handle based on number of submissions
+        if len(room.player_inputs) > 1:
+            # Multiple submissions: proceed to voting
             room.phase = GamePhase.VOTING
             room.update_activity()
             self.storage.save_room(room)
             logger.info(
                 f"Advanced to voting with {len(room.player_inputs)} inputs in room {room_id}"
             )
+        elif len(room.player_inputs) == 1:
+            # Single submission: skip voting, use it directly
+            single_input = room.player_inputs[0]
+            logger.info(
+                f"Single input from '{single_input.player_name}' in room {room_id}, "
+                "skipping voting and using it directly"
+            )
+            # Award points to the single submitter
+            room.scores[single_input.player_name] += 15
+            # Mark as winning input by giving it a vote
+            single_input.votes = 1
+            single_input.voters = []
+            room.update_activity()
+            self.storage.save_room(room)
+            # Note: The story will be generated when /api/turn/advance is called
         else:
-            # If no one submitted, skip voting and advance turn
-            logger.warning(f"No inputs submitted in room {room_id}, advancing turn")
-            self.advance_turn(room_id)
+            # No submissions: will continue naturally
+            logger.warning(
+                f"No inputs submitted in room {room_id}, will continue story naturally"
+            )
+            room.update_activity()
+            self.storage.save_room(room)
+            # Note: The natural continuation will be handled when /api/turn/advance is called
 
 
 

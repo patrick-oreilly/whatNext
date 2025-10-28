@@ -2,7 +2,7 @@ from google import genai
 import os
 
 
-client = genai.Client(api_key="AIzaSyAqYxMWzZ6h-nLvYyKEIK72A7sdcCjraAs")
+client = genai.Client(api_key="")
 
 # Pricing data (as of October 2025)
 # Prices are per million tokens
