@@ -81,7 +81,7 @@ export const JoinRoom: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Player Name */}
-            <Input
+            <Input 
               label="Your Name"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}

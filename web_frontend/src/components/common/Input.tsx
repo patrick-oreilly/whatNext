@@ -25,7 +25,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div className={`${widthClass} ${className}`}>
       {label && (
-        <label htmlFor={inputId} className="block text-base font-black text-accent-black mb-2 uppercase tracking-wide">
+        <label htmlFor={inputId} className="block text-base font-black text-accent-white mb-2 uppercase tracking-wide">
           {label}
         </label>
       )}
@@ -38,7 +38,7 @@ export const Input: React.FC<InputProps> = ({
         <p className="mt-2 text-sm font-bold text-red-600 uppercase">{error}</p>
       )}
       {helperText && !error && (
-        <p className="mt-2 text-sm font-semibold text-accent-black">{helperText}</p>
+        <p className="mt-2 text-sm font-semibold text-accent-white">{helperText}</p>
       )}
     </div>
   );
