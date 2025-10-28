@@ -81,10 +81,13 @@ class StoryGenerator:
         """
         # Format the player's input
         formatted_input = self.format_player_input(winning_input)
-        
+
+        # Add explicit turn information for better pacing
+        turn_info = f"\n\n[Turn {turn} of {max_turns}]"
+
         # Check if we should start wrapping up
         is_near_end = turn >= (max_turns - 2)
-        
+
         if is_near_end:
             ending_instruction = (
                 "\n\nIMPORTANT: The story is nearing its conclusion. "
@@ -92,9 +95,9 @@ class StoryGenerator:
             )
         else:
             ending_instruction = ""
-        
-        prompt = f"{formatted_input}{ending_instruction}"
-        
+
+        prompt = f"{formatted_input}{turn_info}{ending_instruction}"
+
         logger.info(f"Generated continuation prompt for turn {turn}/{max_turns}")
         return prompt
     

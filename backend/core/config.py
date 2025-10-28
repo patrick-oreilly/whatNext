@@ -25,7 +25,10 @@ class Settings:
     
     # ADK Settings
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    MODEL_NAME: str = "gemini-2.0-flash-live-001"
+
+    MODEL_NAME: str = "gemini-2.5-flash-lite"
+    IMAGE_MODEL_NAME: str = "gemini-2.5-flash-image"
+    TTS_MODEL_NAME: str = "gemini-2.5-flash-tts"
     
     # Error Handling
     MAX_RETRIES: int = 3  

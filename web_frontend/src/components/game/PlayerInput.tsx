@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '../common';
+import { InputTimer } from './InputTimer';
 import { validatePlayerInput } from '../../utils/validation';
 import { MIN_INPUT_LENGTH, MAX_INPUT_LENGTH } from '../../utils/constants';
 
@@ -10,6 +11,8 @@ interface PlayerInputProps {
   hasSubmitted: boolean;
   submissionCount: number;
   totalPlayers: number;
+  timerStartTime?: string | null;
+  onTimeout?: () => void;
 }
 
 export const PlayerInput: React.FC<PlayerInputProps> = ({
@@ -17,6 +20,8 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
   hasSubmitted,
   submissionCount,
   totalPlayers,
+  timerStartTime,
+  onTimeout,
 }) => {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +78,17 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
         </div>
       ) : (
         <div>
+          {/* Timer Display */}
+          {timerStartTime && onTimeout && (
+            <div className="mb-3 flex justify-center">
+              <InputTimer
+                startTime={timerStartTime}
+                timeoutSeconds={120}
+                onTimeout={onTimeout}
+              />
+            </div>
+          )}
+
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}

@@ -59,6 +59,7 @@ class GameRoom(BaseModel):
     max_turns: int = 10
     input_phase_start_time: Optional[datetime] = None  # Track when input phase started
     timed_out_players: List[str] = []  # Track players who timed out
+    next_prompt: Optional[str] = None  # Prompt for next AI generation
 
     class Config:
         use_enum_values = True

@@ -10,13 +10,19 @@
 export const extractDecisionPrompt = (text: string): string | null => {
   if (!text) return null;
 
-  // Match text after [DECISION] or [DESCISON] (typo) marker
-  // Use both patterns to handle backend inconsistency
-  // Stop at next bracket, Status: marker, or end of string
-  const match = text.match(/\[(DECISION|DESCISON)\]\s*(.+?)(?:\[|Status:|$)/is);
+  // First try: Match text after [DECISION] or [DESCISON] (typo) marker
+  const markerMatch = text.match(/\[(DECISION|DESCISON)\]\s*:?\s*([^?]+\?)/i);
+  if (markerMatch && markerMatch[2]) {
+    return markerMatch[2].trim();
+  }
 
-  if (match && match[2]) {
-    return match[2].trim();
+  // Fallback: If no marker found, extract the last sentence that ends with a question mark
+  // This handles cases where backend doesn't include the marker
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const lastSentence = sentences[sentences.length - 1]?.trim();
+
+  if (lastSentence && lastSentence.endsWith('?')) {
+    return lastSentence;
   }
 
   return null;
@@ -33,9 +39,23 @@ export const extractDecisionPrompt = (text: string): string | null => {
 export const cleanStoryText = (text: string): string => {
   if (!text) return '';
 
-  // Remove everything from [DECISION] marker onwards
-  // This removes both the marker and the decision sentence
-  let cleaned = text.replace(/\[(DECISION|DESCISON)\].*$/is, '');
+  let cleaned = text;
+
+  // First, try to remove everything from [DECISION] marker onwards
+  if (/\[(DECISION|DESCISON)\]/i.test(cleaned)) {
+    cleaned = cleaned.replace(/\[(DECISION|DESCISON)\].*$/is, '');
+  } else {
+    // Fallback: If no marker, remove the last sentence if it ends with a question mark
+    // This handles cases where backend doesn't include the marker
+    const sentences = cleaned.split(/(?<=[.!?])\s+/);
+    const lastSentence = sentences[sentences.length - 1]?.trim();
+
+    if (lastSentence && lastSentence.endsWith('?')) {
+      // Remove the last question sentence
+      sentences.pop();
+      cleaned = sentences.join(' ');
+    }
+  }
 
   // Also handle case where Status comes before or without Decision
   // Remove everything from Status: onwards

@@ -308,7 +308,21 @@ class RoomManager:
                 f"Cannot submit input - current phase is {room.phase}",
                 details="Inputs only accepted during PLAYER_INPUT phase"
             )
-        
+
+        # Check if timer has expired
+        if room.is_input_phase_timed_out(settings.INPUT_TIMER_SECONDS):
+            raise InvalidGamePhaseError(
+                f"Cannot submit input - timer has expired",
+                details="Input time limit has been reached"
+            )
+
+        # Check if player already timed out
+        if player_name in room.timed_out_players:
+            raise InvalidGamePhaseError(
+                f"Cannot submit input - player '{player_name}' has timed out",
+                details="Players who timed out cannot submit"
+            )
+
         # Validate player
         if player_name not in room.players:
             raise PlayerNotInRoomError(

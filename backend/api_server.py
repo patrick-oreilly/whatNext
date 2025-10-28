@@ -5,6 +5,9 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+from google.adk.runners import InMemoryRunner
+from google.adk.agents.run_config import RunConfig
+from google.genai.types import Part, Content
 
 from backend.core.models import (
     CreateRoomRequest, JoinRoomRequest, SubmitInputRequest,
@@ -17,6 +20,7 @@ from backend.game_management.story_generator import StoryGenerator
 from backend.core.storage import create_storage
 from backend.core.errors import register_exception_handlers
 from backend.core.config import settings
+from backend.agent.agent import root_agent
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -57,16 +61,16 @@ async def lifespan(app: FastAPI):
     # Validate configuration
     try:
         settings.validate()
-        logger.info("✅ Configuration validated")
+        logger.info("Configuration validated")
     except ValueError as e:
-        logger.error(f"❌ Configuration error: {e}")
+        logger.error(f"Configuration error: {e}")
         raise
     
     # Start background cleanup task
     cleanup_task_handle = asyncio.create_task(cleanup_task())
-    logger.info("✅ Background cleanup task started")
+    logger.info("Background cleanup task started")
     
-    logger.info(f"✅ Server ready on {settings.HOST}:{settings.PORT}")
+    logger.info(f"Server ready on {settings.HOST}:{settings.PORT}")
     logger.info("=" * 60)
     
     yield
@@ -79,11 +83,11 @@ async def lifespan(app: FastAPI):
     for room_id in list(session_manager.sessions.keys()):
         session_manager.close_session(room_id)
     
-    logger.info("✅ Shutdown complete")
+    logger.info("Shutdown complete")
 
 #FastAPI app
 app = FastAPI(
-    title="What's Next - Game Master API",
+    title="Whas Next - Game Master API",
     description="AI-powered collaborative storytelling game backend",
     version="1.0.0",
     lifespan=lifespan
@@ -176,33 +180,33 @@ async def join_room(request: JoinRoomRequest):
 async def start_game(room_id: str):
     """
     Start the game
-    
-    Validates:
-    - Room exists
-    - Enough players (min 2)
-    - Game not already started
-    
-    Creates ADK session and generates opening story
+
+    Creates ADK session and prepares initial prompt
     """
     # Validate and start game
     room_manager.start_game(room_id)
 
-    # Get room and storyline prompt
+    # Get room
     room = room_manager.get_room(room_id)
-    storyline_prompt = story_generator.get_storyline_prompt(room.storyline)
 
-    # Create ADK session with storyline-specific agent
-    await session_manager.create_session(room_id, storyline_prompt=storyline_prompt, user_id=room_id)
+    # Create ADK session
+    session_info = await session_manager.create_session(
+        room_id=room_id,
+        agent=root_agent,
+        user_id=room_id
+    )
 
-    # Send initial message to start the story
-    initial_message = "Begin the story. Give me the opening scene and first decision."
-    session_manager.send_message(room_id, initial_message)
-    
+    # Store initial prompt for first stream
+    initial_message = story_generator.get_storyline_prompt(room.storyline)
+    room.next_prompt = initial_message
+    room_manager.storage.save_room(room)
+
     logger.info(f"Game started in room {room_id}")
-    
+
     return {
         "status": "started",
         "room_id": room_id,
+        "session_id": session_info.session.id,
         "turn": 1,
         "phase": GamePhase.GENERATING_STORY
     }
@@ -356,33 +360,31 @@ async def get_voting_results(room_id: str):
 async def advance_turn(room_id: str):
     """
     Advance to next turn
-    
-    Gets winning input from voting, sends to AI, streams response
     """
     # Get winning input
     winning_input = room_manager.get_winning_input(room_id)
-    
+
     if not winning_input:
         return {"error": "No winning input found"}
-    
+
     # Advance turn
     room_manager.advance_turn(room_id)
-    
+
     room = room_manager.get_room(room_id)
-    
+
     # Check if game should end
     if room.phase == GamePhase.GAME_OVER:
-        # Close session (Decision 1: close after MAX_TURNS)
+        # Close ADK session
         session_manager.close_session(room_id)
-        
+
         logger.info(f"Game ended in room {room_id}")
-        
+
         return {
             "status": "game_over",
             "turn": room.turn,
             "final_scores": room.scores
         }
-    
+
     # Generate continuation prompt
     if story_generator.should_end_story(room.turn, room.max_turns):
         prompt = story_generator.generate_final_prompt(
@@ -398,22 +400,23 @@ async def advance_turn(room_id: str):
             turn=room.turn,
             max_turns=room.max_turns
         )
-    
+
+    # Store prompt for next stream call
+    room.next_prompt = prompt
+    room_manager.storage.save_room(room)
+
     # Set phase to GENERATING_STORY
     room_manager.set_phase(room_id, GamePhase.GENERATING_STORY)
-    
-    # Send to AI
-    session_manager.send_message(room_id, prompt)
-    
+
     logger.info(f"Advanced to turn {room.turn} in room {room_id}")
-    
+
     return {
         "status": "turn_advanced",
         "turn": room.turn,
         "phase": GamePhase.GENERATING_STORY
     }
 
-# AI STREAMING ENDPOINT
+
 
 # Track active streams to prevent concurrent access to same session
 active_streams = {}
@@ -422,27 +425,22 @@ active_streams_lock = asyncio.Lock()
 @app.get("/api/story/stream/{room_id}")
 async def stream_story(room_id: str):
     """
-    Stream AI-generated story content
-
-    Uses Server-Sent Events (SSE) format
-
-    Returns:
-    - Text chunks as they're generated
-    - [DONE] when complete
-    - [ERROR] if generation fails
-
-    Decision 3: Implements automatic retry on failure
-    Prevents concurrent streams for the same room
+    Stream AI-generated story content 
+    
+    Uses proper ADK streaming with live_events
     """
     room = room_manager.get_room(room_id)
-
-    # Create turn-specific cache key to prevent replaying wrong turn's story
+    
+    # Create turn-specific cache key
     stream_key = f"{room_id}_turn_{room.turn}"
-
+    
     # Check if stream is already active for this specific turn
     async with active_streams_lock:
         if stream_key in active_streams:
-            logger.warning(f"Stream already active for room {room_id} turn {room.turn}, replaying cached response")
+            logger.warning(
+                f"Stream already active for room {room_id} turn {room.turn}, "
+                "replaying cached response"
+            )
             # Return cached response if available
             if "response" in active_streams[stream_key]:
                 async def replay_generator():
@@ -461,64 +459,82 @@ async def stream_story(room_id: str):
                         "X-Accel-Buffering": "no",
                     }
                 )
-
+        
         # Mark stream as active for this turn
         active_streams[stream_key] = {"response": []}
 
     async def event_generator():
-        """Generate Server-Sent Events"""
+        """Generate Server-Sent Events from ADK"""
         try:
             full_response = ""
             chunks = []
 
-            # Stream from ADK with retry logic (Decision 3)
-            async for chunk in session_manager.stream_response(room_id):
+            # Get the prepared prompt from room
+            room = room_manager.get_room(room_id)
+
+            if not room.next_prompt:
+                logger.error(f"No prompt prepared for room {room_id}")
+                yield "data: [ERROR] No prompt prepared\n\n"
+                return
+
+            message = room.next_prompt
+
+            # Stream response
+            async for chunk in session_manager.stream_response(room_id, message):
                 full_response += chunk
                 chunks.append(chunk)
 
-                # Send chunk to client
+                # Send chunk to client in SSE format
                 yield f"data: {chunk}\n\n"
 
                 # Small delay for smooth streaming
                 await asyncio.sleep(0.01)
-
+            
             # Store cached chunks for late joiners
             async with active_streams_lock:
                 if stream_key in active_streams:
                     active_streams[stream_key]["response"] = chunks
 
+            # Clear the prompt after use
+            room = room_manager.get_room(room_id)
+            room.next_prompt = None
+            room_manager.storage.save_room(room)
+
             # Store complete story segment
             room_manager.add_story_segment(
                 room_id=room_id,
                 content=full_response,
-                winning_player=None  # Set by voting results
+                winning_player=None
             )
-
-            # Check if this was turn 1 (opening) or continuation
+            
+            # Update room phase
             room = room_manager.get_room(room_id)
-
+            
             if room.turn == 1:
                 # After opening, move to player input
                 room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
             else:
                 # After continuation, move to player input for next turn
                 room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
-
+            
             # Signal completion
             yield "data: [DONE]\n\n"
-
-            logger.info(f"Story streaming completed for room {room_id}, turn {room.turn}")
-
+            
+            logger.info(
+                f"Story streaming completed for room {room_id}, turn {room.turn}"
+            )
+            
         except Exception as e:
             logger.error(f"Error streaming story for room {room_id}: {e}")
             yield f"data: [ERROR] {str(e)}\n\n"
+            
         finally:
             # Clean up after a delay to allow late joiners
             await asyncio.sleep(5)
             async with active_streams_lock:
                 if stream_key in active_streams:
                     del active_streams[stream_key]
-
+    
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
@@ -529,20 +545,19 @@ async def stream_story(room_id: str):
         }
     )
 
-
 # UTILITY ENDPOINTS
 
 @app.get("/api/sessions/active")
 async def get_active_sessions():
     """Get information about active ADK sessions"""
     sessions = session_manager.get_active_sessions()
-    
+
     return {
         "count": len(sessions),
         "sessions": [
             {
                 "room_id": session.room_id,
-                "session_id": session.session_id,
+                "session_id": session.session.id,
                 "message_count": session.message_count,
                 "created_at": session.created_at.isoformat()
             }

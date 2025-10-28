@@ -53,9 +53,11 @@ export const JoinRoom: React.FC = () => {
 
       // Navigate to lobby
       navigate(`/lobby/${formattedCode}`);
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to join room';
-
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to join room';
+  
       // Check if it's a room-specific error
       if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
         setErrors({ roomCode: 'Room not found. Please check the code.' });
