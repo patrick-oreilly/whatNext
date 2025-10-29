@@ -11,7 +11,7 @@ export const MAX_TURNS = 20;
 export const DEFAULT_TURNS = 10;
 
 // Input validation
-export const MIN_INPUT_LENGTH = 10;
+export const MIN_INPUT_LENGTH = 3;
 export const MAX_INPUT_LENGTH = 500;
 export const MIN_PLAYER_NAME_LENGTH = 1;
 export const MAX_PLAYER_NAME_LENGTH = 20;

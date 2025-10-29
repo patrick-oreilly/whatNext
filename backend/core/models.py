@@ -120,7 +120,7 @@ class SubmitInputRequest(BaseModel):
     """Request to sumbit a story continuation"""
     room_id: str
     player_name: str
-    input_text: str = Field(..., min_length=10, max_length=500)
+    input_text: str = Field(..., min_length=3, max_length=500)
 
 class CastVoteRequest(BaseModel):
     """Request to vote for a story continuation"""

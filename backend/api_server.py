@@ -37,9 +37,9 @@ logger = logging.getLogger(__name__)
 # Global managers
 
 storage = create_storage(settings.STORAGE_TYPE)
-room_manager = RoomManager(storage)
-session_manager = SessionManager()
 story_generator = StoryGenerator()
+room_manager = RoomManager(storage, story_generator)
+session_manager = SessionManager()
 
 # Background tasks
 

@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 
 class RoomManager:
     """Manages game rooms and game state logic"""
-    
-    def __init__(self, storage: Storage):
+
+    def __init__(self, storage: Storage, story_generator=None):
         self.storage = storage
+        self.story_generator = story_generator
         logger.info("RoomManager initialized")
     
   # Create and manage room methods
@@ -277,72 +278,104 @@ class RoomManager:
             self.storage.save_room(room)
             # Note: The story will be generated when /api/turn/advance is called
         else:
-            # No submissions: will continue naturally
+            # No submissions: advance turn and generate natural continuation
             logger.warning(
                 f"No inputs submitted in room {room_id}, will continue story naturally"
             )
+
+            # Advance turn
+            room.turn += 1
+            room.player_inputs = []  # Clear inputs for next turn
+
+            # Check if game should end
+            if room.should_end_game():
+                room.phase = GamePhase.GAME_OVER
+                room.update_activity()
+                self.storage.save_room(room)
+                logger.info(f"Game ended in room {room_id} after {room.turn} turns")
+                return
+
+            # Generate natural continuation prompt if story_generator is available
+            if self.story_generator:
+                # Check if this is the final turn
+                if self.story_generator.should_end_story(room.turn, room.max_turns):
+                    prompt = self.story_generator.generate_natural_continuation_prompt(
+                        storyline=room.storyline,
+                        story_history=room.story_history,
+                        turn=room.turn,
+                        max_turns=room.max_turns
+                    )
+                    prompt += (
+                        "\n\nFINAL TURN: This is the last turn. Bring the story to a "
+                        "dramatic and satisfying conclusion that wraps up all major plot threads. "
+                        "Make it memorable and impactful."
+                    )
+                else:
+                    prompt = self.story_generator.generate_natural_continuation_prompt(
+                        storyline=room.storyline,
+                        story_history=room.story_history,
+                        turn=room.turn,
+                        max_turns=room.max_turns
+                    )
+
+                # Store prompt for streaming
+                room.next_prompt = prompt
+                logger.info(
+                    f"Generated natural continuation prompt for room {room_id}, turn {room.turn}"
+                )
+
+            # Set phase to generating story
+            room.phase = GamePhase.GENERATING_STORY
             room.update_activity()
             self.storage.save_room(room)
-            # Note: The natural continuation will be handled when /api/turn/advance is called
 
+            logger.info(
+                f"Advanced to turn {room.turn} with natural continuation in room {room_id}"
+            )
 
+    # Story submission methods
 
-    # Story management
-
-    def add_story_segment(self, room_id: str, content: str, winning_player: Optional[str] = None) -> None:
-        """Add a story segment to history"""
+    def add_story_segment(
+        self,
+        room_id: str,
+        content: str,
+        winning_player: Optional[str] = None
+    ) -> None:
+        """Add a story segment to the room history"""
         room = self.get_room(room_id)
-        
+
         segment = StorySegment(
             turn=room.turn,
             content=content,
             winning_player=winning_player
         )
-        
+
         room.story_history.append(segment)
         room.update_activity()
-        
         self.storage.save_room(room)
-        logger.info(f"Added story segment for turn {room.turn} in room {room_id}")
-    
-    def get_full_story(self, room_id: str) -> str:
-        """Get complete story as single text"""
-        room = self.get_room(room_id)
-        return "\n\n".join([segment.content for segment in room.story_history])
-    
-    
-    # Player input
+        logger.debug(f"Added story segment to room {room_id}")
 
-    def submit_input(self, room_id: str, player_name: str, input_text: str) -> None:
+    def submit_player_input(
+        self,
+        room_id: str,
+        player_name: str,
+        input_text: str
+    ) -> None:
         """
-        Submit player's story continuation
-        
+        Submit player input for current turn
+
         Raises:
             RoomNotFoundError: Room doesn't exist
             PlayerNotInRoomError: Player not in room
             InvalidGamePhaseError: Not in input phase
         """
         room = self.get_room(room_id)
-        
+
         # Validate phase
         if room.phase != GamePhase.PLAYER_INPUT:
             raise InvalidGamePhaseError(
                 f"Cannot submit input - current phase is {room.phase}",
-                details="Inputs only accepted during PLAYER_INPUT phase"
-            )
-
-        # Check if timer has expired
-        if room.is_input_phase_timed_out(settings.INPUT_TIMER_SECONDS):
-            raise InvalidGamePhaseError(
-                f"Cannot submit input - timer has expired",
-                details="Input time limit has been reached"
-            )
-
-        # Check if player already timed out
-        if player_name in room.timed_out_players:
-            raise InvalidGamePhaseError(
-                f"Cannot submit input - player '{player_name}' has timed out",
-                details="Players who timed out cannot submit"
+                details="Inputs only allowed during PLAYER_INPUT phase"
             )
 
         # Validate player
@@ -350,38 +383,57 @@ class RoomManager:
             raise PlayerNotInRoomError(
                 f"Player '{player_name}' not in room {room_id}"
             )
-        
+
         # Check if player already submitted
-        existing = [inp for inp in room.player_inputs if inp.player_name == player_name]
+        existing = next(
+            (inp for inp in room.player_inputs if inp.player_name == player_name),
+            None
+        )
+
         if existing:
             # Update existing input
-            existing[0].text = input_text
-            existing[0].timestamp = datetime.now()
+            existing.text = input_text
             logger.info(f"Player '{player_name}' updated input in room {room_id}")
         else:
             # Add new input
             player_input = PlayerInput(
                 player_name=player_name,
-                text=input_text
+                text=input_text,
+                votes=0
             )
             room.player_inputs.append(player_input)
             logger.info(f"Player '{player_name}' submitted input in room {room_id}")
-        
+
+        # Check if all players have submitted
+        if len(room.player_inputs) == len(room.players):
+            # All players submitted - automatically advance to voting
+            room.phase = GamePhase.VOTING
+            logger.info(
+                f"All players submitted in room {room_id} - automatically advancing to VOTING phase"
+            )
+
         room.update_activity()
         self.storage.save_room(room)
-        
-        # Auto-advance to voting if all players submitted
-        if len(room.player_inputs) == len(room.players):
-            room.phase = GamePhase.VOTING
-            self.storage.save_room(room)
-            logger.info(f"All players submitted - advancing to voting in room {room_id}")
-    
-   
-   # Voting
 
-    def cast_vote(self, room_id: str, voter: str, chosen_player: str) -> None:
+    def submit_input(
+        self,
+        room_id: str,
+        player_name: str,
+        input_text: str
+    ) -> None:
+        """Alias for submit_player_input for API compatibility"""
+        return self.submit_player_input(room_id, player_name, input_text)
+
+    # Voting methods
+
+    def record_vote(
+        self,
+        room_id: str,
+        voter: str,
+        chosen_player: str
+    ) -> None:
         """
-        Cast vote for a player's input
+        Record a vote for a player's input
 
         Raises:
             RoomNotFoundError: Room doesn't exist
@@ -411,7 +463,7 @@ class RoomManager:
         # Can't vote for yourself
         if voter == chosen_player:
             raise VotingError("Cannot vote for your own input")
-        
+
         # Validate chosen player has input
         chosen_input = next(
             (inp for inp in room.player_inputs if inp.player_name == chosen_player),
@@ -421,7 +473,7 @@ class RoomManager:
             raise VotingError(
                 f"Player '{chosen_player}' has no input to vote for"
             )
-        
+
         # Remove any existing vote from this voter
         for inp in room.player_inputs:
             if hasattr(inp, 'voters'):
@@ -434,70 +486,79 @@ class RoomManager:
             chosen_input.voters = []
         chosen_input.voters.append(voter)
         chosen_input.votes += 1
-                    
+
         room.update_activity()
         self.storage.save_room(room)
-        
+
         logger.info(f"Player '{voter}' voted for '{chosen_player}' in room {room_id}")
-    
+
+    def cast_vote(
+        self,
+        room_id: str,
+        voter: str,
+        chosen_player: str
+    ) -> None:
+        """Alias for record_vote for API compatibility"""
+        return self.record_vote(room_id, voter, chosen_player)
+
     def calculate_winner(self, room_id: str) -> VotingResultsResponse:
         """
         Calculate voting results and determine winner
-        
+
         Returns:
             VotingResultsResponse with winner and vote counts
         """
         room = self.get_room(room_id)
-        
+
         if not room.player_inputs:
             raise VotingError("No player inputs to vote on")
-        
+
         # Find input with most votes
         winning_input = max(room.player_inputs, key=lambda inp: inp.votes)
 
         # Award points (15 points per vote)
         room.scores[winning_input.player_name] += winning_input.votes * 15
-        
+
         # Build vote counts
         vote_counts = {
-            inp.player_name: inp.votes 
+            inp.player_name: inp.votes
             for inp in room.player_inputs
         }
-        
+
         room.update_activity()
         self.storage.save_room(room)
-        
+
         logger.info(f"Voting winner in room {room_id}: '{winning_input.player_name}' with {winning_input.votes} votes")
-        
+
         return VotingResultsResponse(
             room_id=room_id,
             winning_player=winning_input.player_name,
             winning_input=winning_input.text,
             vote_counts=vote_counts
         )
-    
+
     def get_winning_input(self, room_id: str) -> Optional[str]:
         """Get the winning input text from last voting round"""
         room = self.get_room(room_id)
-        
+
         if not room.player_inputs:
             return None
-        
+
         winning_input = max(room.player_inputs, key=lambda inp: inp.votes)
         return winning_input.text
-   
+
     # Cleanup
 
     def cleanup_idle_rooms(self) -> int:
         """
         Clean up rooms that have been idle too long
-        
+
         Returns:
             Number of rooms deleted
         """
         deleted = 0
         room_ids = self.list_rooms()
-        
+
         for room_id in room_ids:
             try:
                 room = self.get_room(room_id)
@@ -507,15 +568,15 @@ class RoomManager:
                     logger.info(f"Cleaned up idle room {room_id}")
             except RoomNotFoundError:
                 continue
-        
+
         if deleted > 0:
             logger.info(f"Cleanup completed: {deleted} idle rooms deleted")
-        
+
         return deleted
-    
-    
+
+
     # Function for generating the room id
-    
+
     def _generate_room_id(self) -> str:
         """Generate unique 6-character room ID"""
         chars = string.ascii_uppercase + string.digits

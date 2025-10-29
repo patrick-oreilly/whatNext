@@ -45,14 +45,20 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
 
     try {
       await onSubmit(input.trim());
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit input');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to submit input');
+      } else {
+        setError('An unknown error occurred.');
+      }
       setIsSubmitting(false);
     }
   };
 
   const remainingChars = MAX_INPUT_LENGTH - input.length;
   const charCountColor = remainingChars < 50 ? 'text-primary' : 'text-accent-white text-opacity-60';
+
+  const currentValidationError = validatePlayerInput(input);
 
   return (
     <div>
@@ -116,7 +122,7 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
             fullWidth
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={input.trim().length < MIN_INPUT_LENGTH}
+            disabled={!!currentValidationError}
             className="mt-6"
             size="lg"
           >

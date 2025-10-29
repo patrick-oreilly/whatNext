@@ -1,6 +1,6 @@
 // Main Game page - 3-Screen Flow
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
@@ -13,7 +13,7 @@ import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
 import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
-import { GamePhase, StoryLineType } from '../types';
+import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
 import { extractDecisionPrompt, extractStatus, cleanStoryText } from '../utils/storyHelpers';
 
@@ -37,7 +37,7 @@ export const Game: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasSubmittedInput, setHasSubmittedInput] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [votingResults, setVotingResults] = useState<any>(null);
+  const [votingResults, setVotingResults] = useState<VotingResultsResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
   const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
@@ -55,8 +55,20 @@ export const Game: React.FC = () => {
     return { decision: null, status: null };
   }, [roomState?.story_history]);
 
+  const fetchVotingResults = useCallback(async () => {
+    if (!roomId) return;
+
+    try {
+      const results = await gameplayApi.getVotingResults(roomId);
+      setVotingResults(results);
+      setShowResults(true);
+    } catch (err) {
+      console.error('Failed to fetch voting results:', err);
+    }
+  }, [roomId]);
+
   // Fetch room state
-  const fetchRoomState = async () => {
+  const fetchRoomState = useCallback(async () => {
     if (!roomId) return;
 
     try {
@@ -104,38 +116,25 @@ export const Game: React.FC = () => {
           player => !(state.timed_out_players || []).includes(player)
         );
 
-        const totalVotes = state.player_inputs.reduce((sum, input) => sum + input.votes, 0);
         const allVoted = uniqueVoters.size === eligibleVoters.length;
-
-        console.log('Vote check:', {
-          phase: state.phase,
-          totalVotes,
-          uniqueVotersCount: uniqueVoters.size,
-          uniqueVoters: Array.from(uniqueVoters),
-          playerCount: state.players.length,
-          players: state.players,
-          eligibleVoterCount: eligibleVoters.length,
-          eligibleVoters: eligibleVoters,
-          timedOutPlayers: state.timed_out_players,
-          allVoted,
-          hasResults: !!votingResults,
-          playerInputs: state.player_inputs.map(i => ({ player: i.player_name, votes: i.votes, voters: i.voters }))
-        });
 
         if (allVoted && !votingResults) {
           console.log('✅ All eligible players have voted! Fetching voting results...');
-          // Fetch voting results
           fetchVotingResults();
         }
       }
 
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load game');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to load game');
+      } else {
+        setError('An unknown error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [roomId, setRoomState, navigate, roomState?.phase, roomState?.turn, votingResults, fetchVotingResults]);
 
   // Poll for updates
   usePolling(fetchRoomState, GAME_STATE_POLL_INTERVAL, !!roomId);
@@ -143,7 +142,7 @@ export const Game: React.FC = () => {
   // Initial load
   useEffect(() => {
     fetchRoomState();
-  }, [roomId]);
+  }, [roomId, fetchRoomState]);
 
   // Start streaming when phase is GENERATING_STORY
   useEffect(() => {
@@ -185,18 +184,6 @@ export const Game: React.FC = () => {
     await fetchRoomState();
   };
 
-  const fetchVotingResults = async () => {
-    if (!roomId) return;
-
-    try {
-      const results = await gameplayApi.getVotingResults(roomId);
-      setVotingResults(results);
-      setShowResults(true);
-    } catch (err: any) {
-      console.error('Failed to fetch voting results:', err);
-    }
-  };
-
   const handleAdvanceTurn = async () => {
     if (!roomId) return;
 
@@ -205,8 +192,12 @@ export const Game: React.FC = () => {
       setVotingResults(null);
       await gameplayApi.advanceTurn(roomId);
       await fetchRoomState();
-    } catch (err: any) {
-      setError(err.message || 'Failed to advance turn');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to advance turn');
+      } else {
+        setError('An unknown error occurred.');
+      }
     }
   };
 
@@ -216,8 +207,12 @@ export const Game: React.FC = () => {
     try {
       // Move to next phase (player input)
       await fetchRoomState();
-    } catch (err: any) {
-      setError(err.message || 'Failed to continue');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to continue');
+      } else {
+        setError('An unknown error occurred.');
+      }
     }
   };
 
@@ -227,8 +222,12 @@ export const Game: React.FC = () => {
     try {
       await gameplayApi.triggerInputTimeout(roomId);
       await fetchRoomState();
-    } catch (err: any) {
-      console.error('Failed to handle timeout:', err);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error('Failed to handle timeout:', err.message);
+      } else {
+        console.error('An unknown error occurred while handling timeout.');
+      }
     }
   };
 
@@ -347,16 +346,16 @@ export const Game: React.FC = () => {
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
                         <ReactMarkdown
                           components={{
-                            p: ({node, ...props}) => <p className="mb-4 text-accent-white font-semibold text-lg leading-relaxed" {...props} />,
-                            strong: ({node, ...props}) => <strong className="text-primary font-black" {...props} />,
-                            em: ({node, ...props}) => <em className="text-primary-400 font-bold" {...props} />,
-                            h1: ({node, ...props}) => <h1 className="text-3xl font-black text-primary mb-4 uppercase" {...props} />,
-                            h2: ({node, ...props}) => <h2 className="text-2xl font-black text-primary mb-3 uppercase" {...props} />,
-                            h3: ({node, ...props}) => <h3 className="text-xl font-black text-primary mb-2 uppercase" {...props} />,
-                            ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-                            ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-                            li: ({node, ...props}) => <li className="text-accent-white font-semibold" {...props} />,
-                            blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
+                            p: ({ ...props}) => <p className="mb-4 text-accent-white font-semibold text-lg leading-relaxed" {...props} />,
+                            strong: ({ ...props}) => <strong className="text-primary font-black" {...props} />,
+                            em: ({ ...props}) => <em className="text-primary-400 font-bold" {...props} />,
+                            h1: ({ ...props}) => <h1 className="text-3xl font-black text-primary mb-4 uppercase" {...props} />,
+                            h2: ({ ...props}) => <h2 className="text-2xl font-black text-primary mb-3 uppercase" {...props} />,
+                            h3: ({ ...props}) => <h3 className="text-xl font-black text-primary mb-2 uppercase" {...props} />,
+                            ul: ({ ...props}) => <ul className="list-disc list-inside mb-4 space-y-2 text-accent-white" {...props} />,
+                            ol: ({ ...props}) => <ol className="list-decimal list-inside mb-4 space-y-2 text-accent-white" {...props} />,
+                            li: ({ ...props}) => <li className="text-accent-white font-semibold" {...props} />,
+                            blockquote: ({ ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
                           }}
                         >
                           {cleanStoryText(roomState.story_history[roomState.story_history.length - 1].content)}
@@ -439,7 +438,7 @@ export const Game: React.FC = () => {
                           Vote Breakdown
                         </h4>
                         <div className="space-y-3">
-                          {Object.entries(votingResults.vote_counts).map(([player, votes]: [string, any]) => (
+                          {Object.entries(votingResults.vote_counts).map(([player, votes]: [string, number]) => (
                             <div key={player} className="flex justify-between items-center bg-accent-white bg-opacity-10 p-3 rounded">
                               <span className="font-bold text-accent-white">{player}</span>
                               <span className="text-primary font-black text-xl">{votes} {votes === 1 ? 'vote' : 'votes'}</span>
