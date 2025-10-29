@@ -22,9 +22,15 @@ from backend.core.errors import register_exception_handlers
 from backend.core.config import settings
 from backend.agent.agent import root_agent
 
+import os
+import uuid
+
+# Generate unique instance ID to track multi-instance issues
+INSTANCE_ID = os.getenv("INSTANCE_ID", str(uuid.uuid4())[:8])
+
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format=f'[{INSTANCE_ID}] %(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -158,19 +164,21 @@ async def create_room(request: CreateRoomRequest):
 async def join_room(request: JoinRoomRequest):
     """
     Add player to existing room
-    
+
     Validates:
     - Room exists
     - Room not full
     - Game hasn't started
     - Player name not taken
     """
+    logger.info(f"[JOIN REQUEST] Room: {request.room_id}, Player: {request.player_name}, Available rooms: {room_manager.list_rooms()}")
+
     room_manager.add_player(request.room_id, request.player_name)
-    
+
     room = room_manager.get_room(request.room_id)
-    
+
     logger.info(f"Player '{request.player_name}' joined room {request.room_id}")
-    
+
     return JoinRoomResponse(
         room_id=request.room_id,
         players=room.players

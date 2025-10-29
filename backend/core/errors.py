@@ -1,7 +1,11 @@
 # Custom error handling for what next
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Custom exceptions
 
@@ -48,6 +52,9 @@ class VotingError(WhatNextException):
 # FastAPI exceptions
 
 async def room_not_found_handler(request: Request, exc: RoomNotFoundError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Room not found error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=404,
         content={
@@ -58,6 +65,9 @@ async def room_not_found_handler(request: Request, exc: RoomNotFoundError):
     )
 
 async def room_full_handler(request: Request, exc: RoomFullError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Room full error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=400,
         content={
@@ -68,6 +78,9 @@ async def room_full_handler(request: Request, exc: RoomFullError):
     )
 
 async def player_not_in_room_handler(request: Request, exc: PlayerNotInRoomError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Player not in room error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=403,
         content={
@@ -78,6 +91,9 @@ async def player_not_in_room_handler(request: Request, exc: PlayerNotInRoomError
     )
 
 async def invalid_game_phase_handler(request: Request, exc: InvalidGamePhaseError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Invalid game phase error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=400,
         content={
@@ -88,6 +104,9 @@ async def invalid_game_phase_handler(request: Request, exc: InvalidGamePhaseErro
     )
 
 async def not_enough_players_handler(request: Request, exc: NotEnoughPlayersError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Not enough players error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=400,
         content={
@@ -98,6 +117,9 @@ async def not_enough_players_handler(request: Request, exc: NotEnoughPlayersErro
     )
 
 async def session_error_handler(request: Request, exc: SessionError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Session error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=500,
         content={
@@ -108,6 +130,9 @@ async def session_error_handler(request: Request, exc: SessionError):
     )
 
 async def duplicate_player_handler(request: Request, exc: DuplicatePlayerError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Duplicate player error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=400,
         content={
@@ -118,12 +143,39 @@ async def duplicate_player_handler(request: Request, exc: DuplicatePlayerError):
     )
 
 async def voting_error_handler(request: Request, exc: VotingError):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Voting error: {exc.message} | Details: {exc.details}")
     return JSONResponse(
         status_code=400,
         content={
             "error": "voting_error",
             "message": exc.message,
             "details": exc.details
+        }
+    )
+
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors"""
+    logger.error(f"Validation error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "validation_error",
+            "message": "Invalid request data",
+            "details": str(exc.errors())
+        }
+    )
+
+async def general_exception_handler(request: Request, exc: Exception):
+    """Catch-all for unexpected errors"""
+    logger.error(f"Unexpected error: {type(exc).__name__}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_error",
+            "message": "An unexpected error occurred",
+            "details": str(exc)
         }
     )
 
@@ -140,3 +192,5 @@ def register_exception_handlers(app):
     app.add_exception_handler(SessionError, session_error_handler)
     app.add_exception_handler(DuplicatePlayerError, duplicate_player_handler)
     app.add_exception_handler(VotingError, voting_error_handler)
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(Exception, general_exception_handler)
