@@ -21,52 +21,55 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 20) {
-                    Text("WHAT")
-                        .font(.system(size: 60))
-                        .fontWeight(.heavy)
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 30)
-                        .padding(.bottom, -50)
-                    Text("NEXT")
-                        .font(.system(size: 60))
-                        .fontWeight(.heavy)
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 30)
-                    
-                    NavigationLink(destination: Lobby()){
-                        Text("START GAME")
-                            .font(.system(size: 30))
+                    HStack(spacing: -65){
+                        VStack(spacing: 20) {
+                            Text("WHAT")
+                                .font(.system(size: 80))
+                                .fontWeight(.heavy)
+                                .foregroundStyle(Color.white)
+                                .padding(.horizontal, 30)
+                                .padding(.bottom, -60)
+                            Text("NEXT")
+                                .font(.system(size: 80))
+                                .fontWeight(.heavy)
+                                .foregroundStyle(Color.black)
+                                .padding(.horizontal, 30)
+                        }
+                        Text("?")
+                            .font(.system(size: 160))
                             .fontWeight(.heavy)
+                            .fontWidth(.condensed)
                             .foregroundStyle(Color.white)
                             .padding(.horizontal, 30)
+                    }
+                    
+                    NavigationLink(destination: GameChoices()){
+                        Text("START GAME")
+                            .font(.system(size: 40))
+                            .fontWeight(.heavy)
+                            .foregroundStyle(Color.white)
+                            .padding(10)
                             .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(lineWidth: 7)
+                                RoundedRectangle(cornerRadius: 20)
                                     .foregroundColor(Color.black)
-                                    .background(Color.black)
+                                    .frame(width: 300)
                             )
-                            .frame(maxWidth: .infinity)
                     }
                                     
                     NavigationLink(destination: FindGame()){
                         Text("FIND GAME")
-                            .font(.system(size: 30))
+                            .font(.system(size: 40))
                             .fontWeight(.heavy)
                             .foregroundStyle(Color.white)
-                            .padding(.horizontal, 30)
+                            .padding(10)
                             .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(lineWidth: 7)
+                                RoundedRectangle(cornerRadius: 20)
                                     .foregroundColor(Color.black)
-                                    .background(Color.black)
-                                    .frame(minWidth: 250)
+                                    .frame(width: 300)
                             )
                     }
-                    
-                    
                 }
             }
-            
         }
     }
 }

@@ -8,11 +8,9 @@
 import SwiftUI
 
 struct PromptScreen: View {
-    @State private var prompt = ""
-    let players = ["Patrick", "Aedan", "Eoin", "Dad", "Mom"]
+    @ObservedObject var viewModel: GameViewModel
     
     var body: some View {
-        NavigationView {
             ZStack{
                 //Color.indigo.ignoresSafeArea()
                 LinearGradient(
@@ -25,7 +23,7 @@ struct PromptScreen: View {
                 VStack (spacing: 30){
                     Spacer()
                     
-                    HStack(spacing: -60){
+                    HStack(spacing: -65){
                         VStack(spacing: 20) {
                             Text("WHAT")
                                 .font(.system(size: 60))
@@ -42,6 +40,7 @@ struct PromptScreen: View {
                         Text("?")
                             .font(.system(size: 125))
                             .fontWeight(.heavy)
+                            .fontWidth(.condensed)
                             .foregroundStyle(Color.white)
                             .padding(.horizontal, 30)
                     }
@@ -52,9 +51,9 @@ struct PromptScreen: View {
                         .fontWeight(.heavy)
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 30)
-                        
                     
-                    TextField("Enter prompt here...", text: $prompt)
+                    
+                    TextField("Enter prompt here...", text: $viewModel.prompt)
                         .font(.system(size: 20, weight: .bold))
                         .padding()
                         .background(Color.white.opacity(0.75))
@@ -62,40 +61,41 @@ struct PromptScreen: View {
                         .padding(.horizontal)
                         .padding(.bottom, -15)
                     
-                    NavigationLink(destination: GameView()){
+                    NavigationLink(destination: VoteScreen(viewModel: GameViewModel())){
                         Text("SUBMIT")
                             .font(.system(size: 30))
                             .fontWeight(.heavy)
                             .foregroundStyle(Color.white)
+                            .padding(.vertical, 5)
                             .padding(.horizontal, 30)
                             .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(lineWidth: 7)
+                                RoundedRectangle(cornerRadius: 15)
                                     .foregroundColor(Color.black)
-                                    .background(Color.black)
                                 
                             )
                             .frame(maxWidth: .infinity)
                     }
+                    .disabled(viewModel.prompt == "")
+                    .opacity(viewModel.prompt != "" ? 1.0 : 0.5)
                     .padding(30)
                     
                     Spacer()
                     
                     HStack{
-                        ForEach(players, id: \.self) { player in
+                        ForEach(viewModel.players, id: \.self) { player in
                             VStack{
-                                if (players.firstIndex(of: player) ?? 0) % 2 == 1 {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.black)
-                                            .fontWeight(.heavy)
-                                            .frame(height: 15)
-                                            .frame(width: 50)
-                                    } else {
-                                        // Empty space so layout stays consistent
-                                        Color.clear
-                                            .frame(height: 15)
-                                            .frame(width: 50)
-                                    }
+                                if (viewModel.players.firstIndex(of: player) ?? 0) % 2 == 1 {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.black)
+                                        .fontWeight(.heavy)
+                                        .frame(height: 15)
+                                        .frame(width: 50)
+                                } else {
+                                    // Empty space so layout stays consistent
+                                    Color.clear
+                                        .frame(height: 15)
+                                        .frame(width: 50)
+                                }
                                 Image(systemName: "person.fill")
                                     .resizable()
                                     .frame(width: 50, height: 50)
@@ -105,13 +105,14 @@ struct PromptScreen: View {
                                     .foregroundStyle(Color.white)
                             }
                         }
-                    }
+                    
                 }
             }
-        }
+            }
+        
     }
 }
 
 #Preview {
-    PromptScreen()
+    PromptScreen(viewModel: GameViewModel())
 }

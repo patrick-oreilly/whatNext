@@ -9,9 +9,10 @@ import SwiftUI
 
 struct GameView: View {
     var body: some View {
-        let players = ["Patrick", "Aedan", "Eoin", "Dad", "Mom"]
+        @ObservedObject var viewModel = GameViewModel()
         
-        NavigationView {
+        let story = "A young Irish hooper bursts into the NBA spotlight, his crossover dazzling, his dreams colossal. Yet each night, he wrestles with legacy—should he chase rings, or retire early to honor his late father’s dream: devouring glory as a hotdog-eating champion? It's draft night, what should he choose to do?"
+        
             ZStack{
                 //Color.indigo.ignoresSafeArea()
                 LinearGradient(
@@ -22,13 +23,13 @@ struct GameView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 20) {
-                    Text("THE NBA")
+                    Text("HOOP")
                         .font(.system(size: 60))
                         .fontWeight(.heavy)
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 30)
                         .padding(.bottom, -50)
-                    Text("JOURNEY")
+                    Text("DREAMS")
                         .font(.system(size: 60))
                         .fontWeight(.heavy)
                         .foregroundStyle(Color.black)
@@ -36,19 +37,33 @@ struct GameView: View {
                     
                     
                     ScrollView{
-                        Text("A young Irish hooper bursts into the NBA spotlight, his crossover dazzling, his dreams colossal. Yet each night, he wrestles with legacy—should he chase rings, or retire early to honor his late father’s dream: devouring glory as a hotdog-eating champion? It's draft night, what should he choose to do?")
+                        Text(story)
                             .font(.system(size: 25))
                             .fontWeight(.bold)
                             .padding(25)
                             .foregroundStyle(Color.white)
                     }
                     
+                    NavigationLink(destination: PromptScreen(viewModel: GameViewModel())) {
+                        Text("NEXT")
+                            .font(.system(size: 30))
+                            .fontWeight(.heavy)
+                            .foregroundStyle(Color.white)
+                            .padding(.horizontal, 30)
+                            .background(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .foregroundColor(Color.black)
+                                
+                            )
+                            .frame(maxWidth: .infinity)
+                    }
+                    
                     Spacer()
                     
                     HStack{
-                        ForEach(players, id: \.self) { player in
+                        ForEach(viewModel.players, id: \.self) { player in
                             VStack{
-                                if let index = players.firstIndex(of: player) {
+                                if let index = viewModel.players.firstIndex(of: player) {
                                     let score = index > 0 ? 200 / index : 200
                                     
                                     Text("\(score)")
@@ -66,7 +81,7 @@ struct GameView: View {
                                     .foregroundStyle(Color.white)
                             }
                         }
-                    }
+                    
                 }
             }
         }
