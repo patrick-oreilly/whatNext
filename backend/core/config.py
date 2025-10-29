@@ -39,7 +39,7 @@ class Settings:
     STORAGE_TYPE: str = "memory" 
     
     # Logging
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
     
     @classmethod
     def validate(cls):

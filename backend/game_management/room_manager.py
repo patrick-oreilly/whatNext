@@ -118,8 +118,8 @@ class RoomManager:
                 details=f"Maximum {settings.MAX_PLAYERS} players allowed"
             )
         
-        # Check for duplicate name
-        if player_name in room.players:
+        # Check for duplicate name (case-insensitive)
+        if player_name.lower() in [p.lower() for p in room.players]:
             raise DuplicatePlayerError(
                 f"Player name '{player_name}' already taken in room {room_id}"
             )
@@ -231,56 +231,116 @@ class RoomManager:
         - Uses single submission directly (if only one)
         - Generates natural continuation (if none)
         """
+        logger.info("=" * 80)
+        logger.info(f"🔥 HANDLE_INPUT_TIMEOUT called for room {room_id}")
+        logger.info("=" * 80)
+
         room = self.get_room(room_id)
 
         # Validate phase
+        logger.info(f"📊 Current room phase: {room.phase}")
         if room.phase != GamePhase.PLAYER_INPUT:
+            logger.error(f"❌ Cannot handle timeout - current phase is {room.phase}")
             raise InvalidGamePhaseError(
                 f"Cannot handle timeout - current phase is {room.phase}",
                 details="Timeout only applies to PLAYER_INPUT phase"
             )
 
+        logger.info(f"✅ Phase validation passed (PLAYER_INPUT)")
+
         # Find players who submitted
         submitted_players = [inp.player_name for inp in room.player_inputs]
+        logger.info(f"📝 Submitted players: {submitted_players}")
+        logger.info(f"📝 All players in room: {room.players}")
 
-        # Identify timed out players
-        room.timed_out_players = [
-            player for player in room.players
-            if player not in submitted_players
-        ]
+        # Find timed out players
+        logger.info(f"🔍 Checking for timed out players...")
+        timed_out_count = 0
+        for player in room.players:
+            if player not in submitted_players:
+                logger.info(f"   ⏰ Player '{player}' timed out (no submission)")
+                room.timed_out_players.append(player)
+                timed_out_count += 1
+            else:
+                logger.info(f"   ✓ Player '{player}' submitted on time")
 
-        logger.info(
-            f"Input timeout in room {room_id}: {len(room.timed_out_players)} player(s) timed out"
-        )
+        logger.info(f"📊 Timeout summary:")
+        logger.info(f"   - Total players: {len(room.players)}")
+        logger.info(f"   - Submitted: {len(submitted_players)}")
+        logger.info(f"   - Timed out: {timed_out_count}")
+        logger.info(f"   - Timed out players list: {room.timed_out_players}")
 
         # Handle based on number of submissions
+        logger.info(f"🎯 Determining next action based on number of inputs: {len(room.player_inputs)}")
+
         if len(room.player_inputs) > 1:
             # Multiple submissions: proceed to voting
+            logger.info(f"   → Path 1: MULTIPLE INPUTS ({len(room.player_inputs)}) - advancing to VOTING")
             room.phase = GamePhase.VOTING
             room.update_activity()
             self.storage.save_room(room)
             logger.info(
-                f"Advanced to voting with {len(room.player_inputs)} inputs in room {room_id}"
+                f"✅ Advanced to voting with {len(room.player_inputs)} inputs in room {room_id}"
             )
+            logger.info("=" * 80)
         elif len(room.player_inputs) == 1:
             # Single submission: skip voting, use it directly
+            logger.info(f"   → Path 2: SINGLE INPUT - using it directly, skipping voting")
             single_input = room.player_inputs[0]
-            logger.info(
-                f"Single input from '{single_input.player_name}' in room {room_id}, "
-                "skipping voting and using it directly"
-            )
+            logger.info(f"      Single submitter: '{single_input.player_name}'")
+            logger.info(f"      Input text: '{single_input.text}'")
+            logger.info(f"      Awarding 15 points to '{single_input.player_name}'")
+
             # Award points to the single submitter
             room.scores[single_input.player_name] += 15
             # Mark as winning input by giving it a vote
             single_input.votes = 1
             single_input.voters = []
+
+            # Generate story prompt BEFORE advancing turn (so we have access to the input)
+            if self.story_generator:
+                logger.info(f"      Generating story prompt with single input...")
+                if self.story_generator.should_end_story(room.turn, room.max_turns):
+                    prompt = self.story_generator.generate_final_prompt(
+                        storyline=room.storyline,
+                        story_history=room.story_history,
+                        winning_input=single_input.text
+                    )
+                    logger.info(f"      Generated FINAL story prompt")
+                else:
+                    prompt = self.story_generator.generate_continuation_prompt(
+                        storyline=room.storyline,
+                        story_history=room.story_history,
+                        winning_input=single_input.text,
+                        turn=room.turn + 1,  # Next turn number for prompt
+                        max_turns=room.max_turns
+                    )
+                    logger.info(f"      Generated continuation prompt")
+
+                room.next_prompt = prompt
+
+            # Advance turn (like in normal voting flow)
+            logger.info(f"      Advancing turn from {room.turn} to {room.turn + 1}")
+            room.turn += 1
+            room.player_inputs = []  # Clear inputs for next turn
+
+            # Check if game should end
+            if room.should_end_game():
+                logger.info(f"      Game should end after turn {room.turn}")
+                room.phase = GamePhase.GAME_OVER
+            else:
+                logger.info(f"      Setting phase to GENERATING_STORY")
+                room.phase = GamePhase.GENERATING_STORY
+
             room.update_activity()
             self.storage.save_room(room)
-            # Note: The story will be generated when /api/turn/advance is called
+            logger.info(f"✅ Single input processed: turn advanced to {room.turn}, phase = {room.phase}")
+            logger.info("=" * 80)
         else:
             # No submissions: advance turn and generate natural continuation
+            logger.info(f"   → Path 3: ZERO INPUTS - all players timed out")
             logger.warning(
-                f"No inputs submitted in room {room_id}, will continue story naturally"
+                f"⚠️ No inputs submitted in room {room_id}, will continue story naturally"
             )
 
             # Advance turn
@@ -369,22 +429,39 @@ class RoomManager:
             PlayerNotInRoomError: Player not in room
             InvalidGamePhaseError: Not in input phase
         """
+        logger.info("=" * 80)
+        logger.info(f"📝 SUBMIT_PLAYER_INPUT called")
+        logger.info(f"   - Room: {room_id}")
+        logger.info(f"   - Player: {player_name}")
+        logger.info(f"   - Input text: '{input_text}'")
+        logger.info(f"   - Input length: {len(input_text)}")
+        logger.info("=" * 80)
+
         room = self.get_room(room_id)
 
         # Validate phase
+        logger.info(f"🔍 Validating phase...")
+        logger.info(f"   Current phase: {room.phase}")
         if room.phase != GamePhase.PLAYER_INPUT:
+            logger.error(f"❌ Wrong phase for input submission: {room.phase}")
             raise InvalidGamePhaseError(
                 f"Cannot submit input - current phase is {room.phase}",
                 details="Inputs only allowed during PLAYER_INPUT phase"
             )
+        logger.info(f"✅ Phase validation passed")
 
         # Validate player
+        logger.info(f"🔍 Validating player...")
+        logger.info(f"   Room players: {room.players}")
         if player_name not in room.players:
+            logger.error(f"❌ Player '{player_name}' not in room")
             raise PlayerNotInRoomError(
                 f"Player '{player_name}' not in room {room_id}"
             )
+        logger.info(f"✅ Player validation passed")
 
         # Check if player already submitted
+        logger.info(f"🔍 Checking for existing submission...")
         existing = next(
             (inp for inp in room.player_inputs if inp.player_name == player_name),
             None
@@ -392,28 +469,42 @@ class RoomManager:
 
         if existing:
             # Update existing input
+            logger.info(f"   ℹ️ Found existing input, UPDATING")
+            logger.info(f"   Old text: '{existing.text}'")
+            logger.info(f"   New text: '{input_text}'")
             existing.text = input_text
-            logger.info(f"Player '{player_name}' updated input in room {room_id}")
+            logger.info(f"✅ Player '{player_name}' updated input in room {room_id}")
         else:
             # Add new input
+            logger.info(f"   ℹ️ No existing input, CREATING NEW")
             player_input = PlayerInput(
                 player_name=player_name,
                 text=input_text,
                 votes=0
             )
             room.player_inputs.append(player_input)
-            logger.info(f"Player '{player_name}' submitted input in room {room_id}")
+            logger.info(f"✅ Player '{player_name}' submitted NEW input in room {room_id}")
 
         # Check if all players have submitted
+        logger.info(f"🔍 Checking if all players submitted...")
+        logger.info(f"   Total players: {len(room.players)}")
+        logger.info(f"   Submitted inputs: {len(room.player_inputs)}")
+        logger.info(f"   Players with inputs: {[inp.player_name for inp in room.player_inputs]}")
+
         if len(room.player_inputs) == len(room.players):
             # All players submitted - automatically advance to voting
+            logger.info(f"🎉 ALL PLAYERS SUBMITTED!")
+            logger.info(f"   → Automatically advancing to VOTING phase")
             room.phase = GamePhase.VOTING
             logger.info(
-                f"All players submitted in room {room_id} - automatically advancing to VOTING phase"
+                f"✅ All players submitted in room {room_id} - automatically advancing to VOTING phase"
             )
+        else:
+            logger.info(f"   → Still waiting for {len(room.players) - len(room.player_inputs)} player(s)")
 
         room.update_activity()
         self.storage.save_room(room)
+        logger.info("=" * 80)
 
     def submit_input(
         self,

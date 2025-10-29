@@ -39,7 +39,7 @@ You guide a single-player basketball story from youth leagues to possible NBA st
 Each turn advances one year, concluding by turn 10 with an ending based on choices. 
 Balance sports, fame, and personal life; any path (career, scandal, alternate life) is valid.
 
-**Stats**: 
+**Stats**:  SHOW 5 stats MAX
 Skills (Ball Handling, Shooting, Defense, IQ, Athleticism, Leadership)
 Physical (Health, Stamina, Injury Risk)
 Mental (Confidence, Focus, Work Ethic, Team Chemistry)
@@ -55,7 +55,7 @@ Guide a cinematic space exploration story: humanity’s leap to the stars and th
 Each turn represents a phase—launch, travel, discovery, conflict, revelation—ending by turn 10. 
 Choices shape sanity, survival, and legacy.
 
-**Stats**: 
+**Stats**: SHOW 5 stats MAX
 Skills (Piloting, Engineering, Diplomacy, Combat, Research)
 Physical (Health, Endurance, Exposure)
 Mental (Sanity, Morale, Curiosity, Isolation)
@@ -70,7 +70,7 @@ CASINO_HEIST = f"""
 Guide a high-stakes heist in a neon-drenched casino city. The player recruits a crew, plans, and executes 
 a daring robbery in 10 turns—outcomes range from riches to betrayal. Player choices affect loyalty, tension, and fate.
 
-**Stats**: 
+**Stats**:SHOW 5 stats MAX
 Skills (Stealth, Hacking, Firearms, Persuasion, Planning)
 Physical (Health, Reflexes, Fatigue)
 Mental (Focus, Trust, Composure, Risk)
@@ -85,7 +85,7 @@ HAUNTED_MANSION = f"""
 Lead a psychological horror tale set in a decaying estate. Explore, uncover, and survive the unknown within 10 turns. 
 Choices test sanity, courage, and morality. The truth may save or consume you.
 
-**Stats**: 
+**Stats**: ONLY SHOW 1 FOR EACH
 Skills (Investigation, Willpower, Perception, Stealth, Empathy)
 Physical (Health, Stamina, Injury)
 Mental (Sanity, Fear, Resolve, Guilt)
@@ -147,7 +147,7 @@ Mention real contexts when natural:
 
 ## NPC Ideas
 
-Producers, venue owners, managers, fellow artists, partners, or family —
+Producers, Seamus the dwarf, venue owners, managers, fellow artists, partners, or family —
  each with distinct voices and perspectives on Jack’s direction. Keep dialogue short and true to life.
 
 ## Examples
