@@ -1,8 +1,0 @@
-google-adk
-fastapi 
-uvicorn 
-python-multipart
-pydantic         
-python-dotenv    
-pytest 
-pytest-asyncio    
