@@ -245,7 +245,7 @@ export const Game: React.FC = () => {
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-md mx-auto text-center bg-accent-black border-4 border-accent-white">
           <div className="text-primary text-6xl mb-4">⚠️</div>
-          <h2 className="text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
+          <h2 className="font-display text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
           <p className="text-accent-white font-bold mb-6">{error}</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </Card>
@@ -266,7 +266,7 @@ export const Game: React.FC = () => {
         <div className="mb-6 bg-accent-black border-4 border-accent-white rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-black text-accent-white uppercase tracking-tight">
+              <h1 className="font-display text-3xl font-black text-accent-white uppercase tracking-tight">
                 What's Next
               </h1>
               <p className="text-primary font-bold text-lg mt-1">
@@ -337,7 +337,7 @@ export const Game: React.FC = () => {
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
-                    <h2 className="text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
+                    <h2 className="font-display text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
                       What Next?
                     </h2>
                     <div className="h-1 w-full bg-primary rounded mb-6"></div>
@@ -400,7 +400,7 @@ export const Game: React.FC = () => {
                       </div>
                     )}
 
-                    <h2 className="text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
+                    <h2 className="font-display text-3xl font-black text-primary uppercase tracking-tight mb-4 text-center">
                       {showResults ? 'Voting Results' : 'Vote For The Best Option'}
                     </h2>
                     <div className="h-1 w-full bg-primary rounded mb-6"></div>

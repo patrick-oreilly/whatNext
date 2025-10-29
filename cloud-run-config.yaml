@@ -1,0 +1,30 @@
+# Cloud Run Service Configuration
+# This forces a single instance to keep in-memory room data consistent
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: whats-next-backend
+spec:
+  template:
+    metadata:
+      annotations:
+        # Force single instance (min=1, max=1)
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+        # Increase request timeout for streaming
+        run.googleapis.com/timeout-seconds: "300"
+    spec:
+      containerConcurrency: 80
+      containers:
+      - image: gcr.io/whats-next-476312/whats-next-backend:latest
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: "2"
+        env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: google-api-key
+              key: latest

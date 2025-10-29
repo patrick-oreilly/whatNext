@@ -6,6 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'display': ['"Bowlby One SC"', 'cursive'],
+        'sans': ['"Funnel Sans"', 'system-ui', 'sans-serif'],
+      },
       colors: {
         primary: {
           DEFAULT: '#FF5722', // Vibrant red-orange

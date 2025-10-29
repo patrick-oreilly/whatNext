@@ -11,3 +11,4 @@ CLAUDE.md
 .env.test
 .env.production
 .vercel
+__pycache__

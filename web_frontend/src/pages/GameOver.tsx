@@ -75,7 +75,7 @@ export const GameOver: React.FC = () => {
           {/* Winner Announcement */}
           <Card className="text-center mb-8 bg-gradient-intense border-4 border-accent-white">
             <div className="text-8xl mb-6">🏆</div>
-            <h1 className="text-6xl font-black text-accent-white uppercase tracking-tight mb-4">
+            <h1 className="font-display text-6xl font-black text-accent-white uppercase tracking-tight mb-4">
               Game Over!
             </h1>
             <p className="text-3xl text-accent-white font-black uppercase tracking-wide mb-2">
@@ -93,7 +93,7 @@ export const GameOver: React.FC = () => {
 
           {/* Final Scores */}
           <Card className="mb-8 bg-accent-black border-4 border-accent-white">
-            <h2 className="text-3xl font-black text-accent-white uppercase tracking-tight mb-6">
+            <h2 className="font-display text-3xl font-black text-accent-white uppercase tracking-tight mb-6">
               Final Scores
             </h2>
             <div className="space-y-3">
@@ -133,7 +133,7 @@ export const GameOver: React.FC = () => {
           {/* Full Story */}
           <Card className="bg-accent-black border-4 border-accent-white">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-black text-accent-white uppercase tracking-tight">
+              <h2 className="font-display text-3xl font-black text-accent-white uppercase tracking-tight">
                 Your Story
               </h2>
               <Button variant="outline" size="sm" onClick={handleDownloadStory}>

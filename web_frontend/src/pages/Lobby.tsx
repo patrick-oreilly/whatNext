@@ -77,7 +77,7 @@ export const Lobby: React.FC = () => {
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-md mx-auto text-center bg-accent-black border-4 border-accent-white">
           <div className="text-primary text-6xl mb-4">⚠️</div>
-          <h2 className="text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
+          <h2 className="font-display text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
           <p className="text-accent-white font-bold mb-6">{error}</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </Card>
@@ -98,7 +98,7 @@ export const Lobby: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           {/* Page Header */}
           <div className="mb-8 text-center">
-            <h1 className="text-5xl font-black text-accent-white uppercase tracking-tight mb-2">
+            <h1 className="font-display text-5xl font-black text-accent-white uppercase tracking-tight mb-2">
               Game Lobby
             </h1>
             <div className="h-2 w-32 bg-primary rounded mx-auto"></div>

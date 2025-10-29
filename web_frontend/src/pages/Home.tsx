@@ -12,7 +12,7 @@ export const Home: React.FC = () => {
     <div className="container mx-auto px-4 py-12">
       {/* Hero Section */}
       <div className="text-center mb-12 animate-fade-in">
-        <h1 className="text-6xl md:text-8xl font-black text-accent-white mb-6 uppercase tracking-tighter text-glow">
+        <h1 className="font-display text-6xl md:text-8xl font-black text-accent-white mb-6 uppercase tracking-tighter text-glow">
           {APP_NAME}
         </h1>
         <p className="text-2xl md:text-3xl text-accent-white font-bold mb-10 uppercase tracking-wide">

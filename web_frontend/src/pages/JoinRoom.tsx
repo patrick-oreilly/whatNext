@@ -79,7 +79,7 @@ export const JoinRoom: React.FC = () => {
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-md mx-auto">
         <Card className="bg-accent-black border-4 border-accent-white">
-          <h1 className="text-4xl font-black text-accent-white mb-8 uppercase tracking-tight text-center">Join Game</h1>
+          <h1 className="font-display text-4xl font-black text-accent-white mb-8 uppercase tracking-tight text-center">Join Game</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Player Name */}
