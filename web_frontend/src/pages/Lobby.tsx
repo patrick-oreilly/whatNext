@@ -1,67 +1,69 @@
-// Lobby/Waiting room page
+// Lobby page
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Spinner } from '../components/common';
 import { PlayerList } from '../components/lobby/PlayerList';
 import { RoomCode } from '../components/lobby/RoomCode';
 import { roomsApi } from '../api/rooms';
 import { useGameStore } from '../store/gameStore';
+import { GamePhase } from '../types';
+import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
 import { usePolling } from '../hooks';
-import { MIN_PLAYERS, MAX_PLAYERS, LOBBY_POLL_INTERVAL } from '../utils/constants';
-import { GamePhase, STORYLINE_LABELS } from '../types';
 
 export const Lobby: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { roomState, setRoomState, currentPlayer } = useGameStore();
+
   const [isLoading, setIsLoading] = useState(true);
-  const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch room state
-  const fetchRoomState = async () => {
+  const fetchRoomState = useCallback(async () => {
     if (!roomId) return;
 
     try {
       const state = await roomsApi.getRoomState(roomId);
       setRoomState(state);
-      setError(null);
 
-      // If game has started, navigate to game page
-      if (state.phase !== GamePhase.LOBBY) {
+      if (state.phase === GamePhase.PLAYER_INPUT || state.phase === GamePhase.GENERATING_STORY) {
         navigate(`/game/${roomId}`);
+      } else if (state.phase === GamePhase.GAME_OVER) {
+        navigate(`/gameover/${roomId}`);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load room');
+
+      setError(null);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message || 'Failed to load room');
+      } else {
+        setError('An unknown error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [roomId, setRoomState, navigate]);
 
   // Poll for updates
-  usePolling(fetchRoomState, LOBBY_POLL_INTERVAL, !!roomId);
+  usePolling(fetchRoomState, GAME_STATE_POLL_INTERVAL, !!roomId);
 
-  // Initial load
   useEffect(() => {
     fetchRoomState();
-  }, [roomId]);
+  }, [fetchRoomState]);
 
   const handleStartGame = async () => {
     if (!roomId) return;
 
-    setIsStarting(true);
     try {
       await roomsApi.startGame(roomId);
-      // The polling will detect the phase change and navigate
-    } catch (err: any) {
-      setError(err.message || 'Failed to start game');
-      setIsStarting(false);
+      // State will be updated by polling, which will trigger navigation
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message || 'Failed to start game');
+      } else {
+        setError('An unknown error occurred.');
+      }
     }
-  };
-
-  const handleLeave = () => {
-    navigate('/');
   };
 
   if (isLoading) {
@@ -85,105 +87,46 @@ export const Lobby: React.FC = () => {
     );
   }
 
-  if (!roomState || !roomId) {
+  if (!roomState) {
     return null;
   }
 
-  const isHost = roomState.players[0] === currentPlayer;
-  const canStart = roomState.players.length >= MIN_PLAYERS;
+  const isHost = currentPlayer === roomState.players[0];
+  const canStartGame = isHost && roomState.players.length >= 2;
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Page Header */}
-          <div className="mb-8 text-center">
-            <h1 className="font-display text-5xl font-black text-accent-white uppercase tracking-tight mb-2">
-              Game Lobby
-            </h1>
-            <div className="h-2 w-32 bg-primary rounded mx-auto"></div>
-          </div>
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        <Card className="bg-accent-black border-4 border-accent-white">
+          <h1 className="font-display text-4xl font-black text-accent-white mb-8 uppercase tracking-tight text-center">Game Lobby</h1>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Left Column - Room Info */}
-            <div className="space-y-6">
-              <RoomCode code={roomId} />
-
-              <Card className="bg-accent-black border-4 border-accent-white">
-                <h2 className="text-2xl font-black text-accent-white uppercase tracking-tight mb-6">
-                  Game Settings
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-accent-white bg-opacity-10 rounded-lg">
-                    <span className="text-accent-white font-bold uppercase tracking-wide">Storyline:</span>
-                    <span className="text-primary font-black">{STORYLINE_LABELS[roomState.storyline]}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-accent-white bg-opacity-10 rounded-lg">
-                    <span className="text-accent-white font-bold uppercase tracking-wide">Turns:</span>
-                    <span className="text-primary font-black">{roomState.max_turns}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-accent-white bg-opacity-10 rounded-lg">
-                    <span className="text-accent-white font-bold uppercase tracking-wide">Players:</span>
-                    <span className="text-primary font-black">{roomState.players.length}/{MAX_PLAYERS}</span>
-                  </div>
-                </div>
-              </Card>
-
-              {error && (
-                <div className="p-4 bg-red-600 border-4 border-accent-white rounded-lg">
-                  <p className="text-accent-white font-bold uppercase text-center">{error}</p>
-                </div>
-              )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-600 border-4 border-accent-white rounded-lg">
+              <p className="text-accent-white font-bold uppercase text-center">{error}</p>
             </div>
+          )}
 
-            {/* Right Column - Players */}
-            <div>
-              <Card className="bg-accent-black border-4 border-accent-white">
-                <h2 className="text-2xl font-black text-accent-white uppercase tracking-tight mb-6">
-                  Players ({roomState.players.length}/{MAX_PLAYERS})
-                </h2>
-                <PlayerList
-                  players={roomState.players}
-                  currentPlayer={currentPlayer}
-                />
-              </Card>
-            </div>
-          </div>
+          <RoomCode code={roomId} />
 
-          {/* Actions */}
-          <div className="mt-8 flex gap-4">
-            <Button
-              variant="outline"
-              onClick={handleLeave}
-              disabled={isStarting}
-              size="lg"
-            >
-              Leave Room
-            </Button>
+          <PlayerList players={roomState.players} host={roomState.players[0]} currentPlayer={currentPlayer} />
 
-            {isHost && (
+          <div className="mt-8 text-center">
+            {isHost ? (
               <Button
                 fullWidth
                 onClick={handleStartGame}
-                loading={isStarting}
-                disabled={!canStart}
+                disabled={!canStartGame}
                 size="lg"
               >
-                {!canStart
-                  ? `Waiting for ${MIN_PLAYERS - roomState.players.length} more player${MIN_PLAYERS - roomState.players.length === 1 ? '' : 's'}...`
-                  : 'Start Game'}
+                {canStartGame ? 'Start Game' : 'Need at least 2 players to start'}
               </Button>
-            )}
-
-            {!isHost && (
-              <div className="flex-1 flex items-center justify-center bg-accent-white bg-opacity-10 border-4 border-accent-white rounded-lg p-4">
-                <p className="text-accent-white font-black uppercase tracking-wide text-lg">
-                  Waiting for host to start the game...
-                </p>
-              </div>
+            ) : (
+              <p className="text-accent-white font-bold text-lg uppercase tracking-wide">
+                Waiting for host to start the game...
+              </p>
             )}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 
 interface RoomCodeProps {
-  code: string;
+  code: string | null | undefined;
 }
 
 export const RoomCode: React.FC<RoomCodeProps> = ({ code }) => {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
+    if (!code) return;
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -19,11 +20,12 @@ export const RoomCode: React.FC<RoomCodeProps> = ({ code }) => {
     <div className="bg-gradient-intense rounded-lg p-8 border-4 border-accent-white">
       <div className="text-sm font-black mb-3 uppercase tracking-wide text-accent-white">Room Code</div>
       <div className="flex items-center justify-between">
-        <div className="text-5xl font-black font-mono tracking-widest text-accent-white">{code}</div>
+        <div className="text-5xl font-black font-mono tracking-widest text-accent-white">{code || ''}</div>
         <button
           onClick={copyToClipboard}
           className="ml-4 px-5 py-3 bg-accent-black hover:bg-gray-900 border-4 border-accent-white rounded-lg transition-all transform hover:scale-105 active:scale-95 flex items-center space-x-2"
           title="Copy room code"
+          disabled={!code}
         >
           {copied ? (
             <>

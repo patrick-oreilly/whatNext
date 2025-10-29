@@ -24,7 +24,7 @@ export const Home: React.FC = () => {
             size="lg"
             fullWidth
             onClick={() => navigate('/create')}
-            className="animate-slide-up animate-pulse-glow"
+            className="animate-pulse-glow"
           >
             Create Room
           </Button>

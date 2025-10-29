@@ -12,7 +12,7 @@ interface PlayerInputProps {
   submissionCount: number;
   totalPlayers: number;
   timerStartTime?: string | null;
-  onTimeout?: () => void;
+  onTimeout?: (currentInput: string) => void;
 }
 
 export const PlayerInput: React.FC<PlayerInputProps> = ({
@@ -24,12 +24,16 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
   onTimeout,
 }) => {
   const [input, setInput] = useState('');
+  const [submittedText, setSubmittedText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Reset input when player re-enters input phase
   useEffect(() => {
-    if (hasSubmitted) {
+    if (!hasSubmitted) {
       setInput('');
+      setSubmittedText(null);
+      setError(null);
     }
   }, [hasSubmitted]);
 
@@ -45,14 +49,37 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
 
     try {
       await onSubmit(input.trim());
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit input');
+      setSubmittedText(input.trim()); // Save what was submitted
+      setInput('');                    // Clear draft
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleTimeout = () => {
+    console.log('⏰ [PlayerInput] handleTimeout called');
+    console.log('⏰ [PlayerInput] Draft input:', input);
+    console.log('⏰ [PlayerInput] Draft length:', input.length);
+    console.log('⏰ [PlayerInput] This draft will NOT be submitted (policy: manual submit only)');
+
+    if (onTimeout) {
+      console.log('⏰ [PlayerInput] Calling parent onTimeout handler (draft will be discarded)');
+      onTimeout(input);
+      // Don't set submittedText - player didn't actually submit
+      setInput('');
+      setError('Time\'s up! Your draft was not submitted. Only manual submission (button click) counts.');
+    } else {
+      console.warn('⚠️ [PlayerInput] No onTimeout handler provided!');
     }
   };
 
   const remainingChars = MAX_INPUT_LENGTH - input.length;
   const charCountColor = remainingChars < 50 ? 'text-primary' : 'text-accent-white text-opacity-60';
+  const currentValidationError = validatePlayerInput(input);
+
+  const displayText = hasSubmitted ? submittedText : input;
 
   return (
     <div>
@@ -66,7 +93,7 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
               <span className="font-black uppercase text-lg tracking-wide">Submitted!</span>
             </div>
             <p className="text-accent-white font-semibold text-base leading-relaxed whitespace-pre-wrap">
-              {input}
+              {displayText || '(empty)'}
             </p>
           </div>
 
@@ -78,13 +105,13 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
         </div>
       ) : (
         <div>
-          {/* Timer Display */}
+          {/* Timer */}
           {timerStartTime && onTimeout && (
             <div className="mb-3 flex justify-center">
               <InputTimer
                 startTime={timerStartTime}
                 timeoutSeconds={120}
-                onTimeout={onTimeout}
+                onTimeout={handleTimeout}
               />
             </div>
           )}
@@ -116,7 +143,7 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
             fullWidth
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={input.trim().length < MIN_INPUT_LENGTH}
+            disabled={!!currentValidationError || isSubmitting}
             className="mt-6"
             size="lg"
           >

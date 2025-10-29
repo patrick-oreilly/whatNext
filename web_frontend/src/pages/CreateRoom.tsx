@@ -58,8 +58,12 @@ export const CreateRoom: React.FC = () => {
 
       // Navigate to lobby
       navigate(`/lobby/${response.room_id}`);
-    } catch (error: any) {
-      setErrors({ playerName: error.message || 'Failed to create room' });
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrors({ playerName: error.message || 'Failed to create room' });
+      } else {
+        setErrors({ playerName: 'An unknown error occurred.' });
+      }
       setIsLoading(false);
     }
   };

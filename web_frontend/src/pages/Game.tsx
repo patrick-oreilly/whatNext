@@ -1,6 +1,6 @@
 // Main Game page - 3-Screen Flow
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
@@ -13,9 +13,29 @@ import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
 import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
-import { GamePhase, StoryLineType } from '../types';
+import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
 import { extractDecisionPrompt, extractStatus, cleanStoryText } from '../utils/storyHelpers';
+
+/* -------------------------------------------------------------------------
+   Markdown component map – defined once outside the component
+   ------------------------------------------------------------------------- */
+const markdownComponents = {
+  p: ({ ...props }) => (
+    <p className="mb-4 text-accent-white font-semibold text-lg leading-relaxed" {...props} />
+  ),
+  strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
+  em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
+  h1: ({ ...props }) => <h1 className="text-3xl font-black text-primary mb-4 uppercase" {...props} />,
+  h2: ({ ...props }) => <h2 className="text-2xl font-black text-primary mb-3 uppercase" {...props} />,
+  h3: ({ ...props }) => <h3 className="text-xl font-black text-primary mb-2 uppercase" {...props} />,
+  ul: ({ ...props }) => <ul className="list-disc list-inside mb-4 space-y-2 text-accent-white" {...props} />,
+  ol: ({ ...props }) => <ol className="list-decimal list-inside mb-4 space-y-2 text-accent-white" {...props} />,
+  li: ({ ...props }) => <li className="text-accent-white font-semibold" {...props} />,
+  blockquote: ({ ...props }) => (
+    <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />
+  ),
+};
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -23,129 +43,150 @@ export const Game: React.FC = () => {
   const { roomState, setRoomState, currentPlayer } = useGameStore();
   const { streamedText, isStreaming, startStream } = useSSE();
 
-  // Play background music for Sunflower West storyline
+  /* -----------------------------------------------------------------------
+     ALL HOOKS — TOP LEVEL, BEFORE ANY RETURN
+     ----------------------------------------------------------------------- */
+
+  // 1. Decision data
+  const currentDecisionData = useMemo(() => {
+    if (!roomState?.story_history?.length) {
+      return { decision: null, status: null };
+    }
+    const last = roomState.story_history[roomState.story_history.length - 1];
+    return {
+      decision: extractDecisionPrompt(last.content),
+      status: extractStatus(last.content),
+    };
+  }, [roomState?.story_history]);
+
+  // 2. Background music
   useBackgroundMusic({
     audioPath: '/sunflower-west.mp3',
-    enabled: roomState?.storyline === StoryLineType.SUNFLOWER_WEST &&
-             roomState?.phase !== GamePhase.LOBBY &&
-             roomState?.phase !== GamePhase.GAME_OVER,
+    enabled:
+      roomState?.storyline === StoryLineType.SUNFLOWER_WEST &&
+      roomState?.phase !== GamePhase.LOBBY &&
+      roomState?.phase !== GamePhase.GAME_OVER,
     volume: 0.3,
     loop: true,
   });
 
+  // 3. State
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasSubmittedInput, setHasSubmittedInput] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [votingResults, setVotingResults] = useState<any>(null);
+  const [votingResults, setVotingResults] = useState<VotingResultsResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
   const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
   const [timedOutPlayers, setTimedOutPlayers] = useState<string[]>([]);
 
-  // Extract decision prompt and status from the last story segment
-  const currentDecisionData = useMemo(() => {
-    if (roomState?.story_history && roomState.story_history.length > 0) {
-      const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-      return {
-        decision: extractDecisionPrompt(lastSegment.content),
-        status: extractStatus(lastSegment.content)
-      };
-    }
-    return { decision: null, status: null };
-  }, [roomState?.story_history]);
+  // 4. Derived values (safe — after early returns)
+  const currentInput = useMemo(
+    () => roomState?.player_inputs.find(i => i.player_name === currentPlayer),
+    [roomState?.player_inputs, currentPlayer]
+  );
+  const hasSubmitted = !!currentInput;
 
-  // Fetch room state
-  const fetchRoomState = async () => {
+  // 5. fetchVotingResults
+  const fetchVotingResults = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      const results = await gameplayApi.getVotingResults(roomId);
+      setVotingResults(results);
+      setShowResults(true);
+    } catch (e) {
+      console.error('Failed to fetch voting results:', e);
+    }
+  }, [roomId]);
+
+  // 6. fetchRoomState
+  const fetchRoomState = useCallback(async () => {
     if (!roomId) return;
 
     try {
+      console.log('🔄 [fetchRoomState] Fetching room state from API...');
       const state = await roomsApi.getRoomState(roomId);
-      setRoomState(state);
+      console.log('📥 [fetchRoomState] Received state from API:', {
+        phase: state.phase,
+        turn: state.turn,
+        player_inputs: state.player_inputs.length,
+        timed_out_players: state.timed_out_players
+      });
 
-      // Update timer information
+      console.log('💾 [fetchRoomState] Updating React state with setRoomState...');
+      setRoomState(state);
+      console.log('✅ [fetchRoomState] React state updated');
+
       if (state.phase === GamePhase.PLAYER_INPUT) {
-        setTimerStartTime(state.input_phase_start_time || null);
-        setTimedOutPlayers(state.timed_out_players || []);
+        console.log('⏱️ [Game] Setting up PLAYER_INPUT phase timer');
+        console.log('⏱️ [Game] input_phase_start_time from backend:', state.input_phase_start_time);
+        console.log('⏱️ [Game] timed_out_players from backend:', state.timed_out_players);
+        setTimerStartTime(state.input_phase_start_time ?? null);
+        setTimedOutPlayers(state.timed_out_players ?? []);
       }
 
-      // Check if phase changed
       if (state.phase === GamePhase.GAME_OVER) {
         navigate(`/gameover/${roomId}`);
-      } else if (state.phase === GamePhase.LOBBY) {
+        return;
+      }
+      if (state.phase === GamePhase.LOBBY) {
         navigate(`/lobby/${roomId}`);
+        return;
       }
 
-      // Reset submission/vote flags on phase change
-      if (state.phase === GamePhase.PLAYER_INPUT && roomState?.phase !== GamePhase.PLAYER_INPUT) {
-        setHasSubmittedInput(false);
-      }
       if (state.phase === GamePhase.VOTING && roomState?.phase !== GamePhase.VOTING) {
         setHasVoted(false);
         setVotingResults(null);
         setShowResults(false);
       }
 
-      // Reset streaming turn tracker when advancing to next turn
       if (state.turn !== roomState?.turn) {
         setLastStreamedTurn(null);
       }
 
-      // Check if all players have voted
-      if (state.phase === GamePhase.VOTING && state.player_inputs.length > 0) {
-        // Get unique voters across all inputs
-        const uniqueVoters = new Set<string>();
-        state.player_inputs.forEach(input => {
-          input.voters.forEach(voter => uniqueVoters.add(voter));
+      if (state.phase === GamePhase.VOTING && state.player_inputs.length) {
+        const eligible = state.players.filter(p => !(state.timed_out_players ?? []).includes(p));
+        const voters = new Set<string>();
+        state.player_inputs.forEach(i => {
+          if (eligible.includes(i.player_name)) {
+            i.voters.forEach(v => voters.add(v));
+          }
         });
 
-        // Calculate eligible voters (exclude timed-out players who cannot vote)
-        const eligibleVoters = state.players.filter(
-          player => !(state.timed_out_players || []).includes(player)
-        );
-
-        const totalVotes = state.player_inputs.reduce((sum, input) => sum + input.votes, 0);
-        const allVoted = uniqueVoters.size === eligibleVoters.length;
-
-        console.log('Vote check:', {
-          phase: state.phase,
-          totalVotes,
-          uniqueVotersCount: uniqueVoters.size,
-          uniqueVoters: Array.from(uniqueVoters),
-          playerCount: state.players.length,
-          players: state.players,
-          eligibleVoterCount: eligibleVoters.length,
-          eligibleVoters: eligibleVoters,
-          timedOutPlayers: state.timed_out_players,
-          allVoted,
-          hasResults: !!votingResults,
-          playerInputs: state.player_inputs.map(i => ({ player: i.player_name, votes: i.votes, voters: i.voters }))
-        });
-
-        if (allVoted && !votingResults) {
-          console.log('✅ All eligible players have voted! Fetching voting results...');
-          // Fetch voting results
-          fetchVotingResults();
+        if (voters.size === eligible.length && !votingResults) {
+          await fetchVotingResults();
         }
       }
 
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load game');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'An unknown error occurred.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [
+    roomId,
+    setRoomState,
+    navigate,
+    roomState?.phase,
+    roomState?.turn,
+    votingResults,
+    fetchVotingResults,
+  ]);
 
-  // Poll for updates
-  usePolling(fetchRoomState, GAME_STATE_POLL_INTERVAL, !!roomId);
+  // 7. Polling
+  const shouldPoll =
+    !!roomId &&
+    roomState?.phase !== GamePhase.LOBBY &&
+    roomState?.phase !== GamePhase.GAME_OVER;
+  usePolling(fetchRoomState, GAME_STATE_POLL_INTERVAL, shouldPoll);
 
-  // Initial load
+  // 8. Initial load
   useEffect(() => {
     fetchRoomState();
-  }, [roomId]);
+  }, [fetchRoomState]);
 
-  // Start streaming when phase is GENERATING_STORY
+  // 9. SSE streaming
   useEffect(() => {
     if (
       roomState?.phase === GamePhase.GENERATING_STORY &&
@@ -153,84 +194,26 @@ export const Game: React.FC = () => {
       roomId &&
       roomState.turn !== lastStreamedTurn
     ) {
-      console.log(`Starting stream for room ${roomId}, turn ${roomState.turn}`);
       startStream(roomId);
       setLastStreamedTurn(roomState.turn);
     }
-  }, [roomState?.phase, roomState?.turn, roomId, isStreaming, lastStreamedTurn, startStream]);
+  }, [
+    roomState?.phase,
+    roomState?.turn,
+    roomId,
+    isStreaming,
+    lastStreamedTurn,
+    startStream,
+  ]);
 
-  const handleSubmitInput = async (text: string) => {
-    if (!roomId || !currentPlayer) return;
-
-    await gameplayApi.submitInput({
-      room_id: roomId,
-      player_name: currentPlayer,
-      input_text: text,
-    });
-
-    setHasSubmittedInput(true);
-    await fetchRoomState();
-  };
-
-  const handleVote = async (chosenPlayer: string) => {
-    if (!roomId || !currentPlayer) return;
-
-    await gameplayApi.castVote({
-      room_id: roomId,
-      voter: currentPlayer,
-      chosen_player: chosenPlayer,
-    });
-
-    setHasVoted(true);
-    await fetchRoomState();
-  };
-
-  const fetchVotingResults = async () => {
-    if (!roomId) return;
-
-    try {
-      const results = await gameplayApi.getVotingResults(roomId);
-      setVotingResults(results);
-      setShowResults(true);
-    } catch (err: any) {
-      console.error('Failed to fetch voting results:', err);
+  // 10. Debug: Track phase changes
+  useEffect(() => {
+    if (roomState) {
+      console.log('🎭 [Game] COMPONENT STATE UPDATED - Current phase:', roomState.phase);
+      console.log('🎭 [Game] Turn:', roomState.turn);
+      console.log('🎭 [Game] Player inputs:', roomState.player_inputs.length);
     }
-  };
-
-  const handleAdvanceTurn = async () => {
-    if (!roomId) return;
-
-    try {
-      setShowResults(false);
-      setVotingResults(null);
-      await gameplayApi.advanceTurn(roomId);
-      await fetchRoomState();
-    } catch (err: any) {
-      setError(err.message || 'Failed to advance turn');
-    }
-  };
-
-  const handleContinue = async () => {
-    if (!roomId) return;
-
-    try {
-      // Move to next phase (player input)
-      await fetchRoomState();
-    } catch (err: any) {
-      setError(err.message || 'Failed to continue');
-    }
-  };
-
-  const handleInputTimeout = async () => {
-    if (!roomId) return;
-
-    try {
-      await gameplayApi.triggerInputTimeout(roomId);
-      await fetchRoomState();
-    } catch (err: any) {
-      console.error('Failed to handle timeout:', err);
-    }
-  };
+  }, [roomState]);
 
   if (isLoading) {
     return (
@@ -244,8 +227,10 @@ export const Game: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-md mx-auto text-center bg-accent-black border-4 border-accent-white">
-          <div className="text-primary text-6xl mb-4">⚠️</div>
-          <h2 className="font-display text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
+          <div className="text-primary text-6xl mb-4">Warning</div>
+          <h2 className="font-display text-3xl font-black text-accent-white uppercase mb-4">
+            Error
+          </h2>
           <p className="text-accent-white font-bold mb-6">{error}</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </Card>
@@ -253,16 +238,137 @@ export const Game: React.FC = () => {
     );
   }
 
-  if (!roomState || !currentPlayer) {
-    return null;
-  }
+  if (!roomState || !currentPlayer) return null;
 
-  const currentInput = roomState.player_inputs.find((i) => i.player_name === currentPlayer);
+  /* -----------------------------------------------------------------------
+     Handlers (after hooks)
+     ----------------------------------------------------------------------- */
+  const handleSubmitInput = async (text: string) => {
+    if (!roomId || !currentPlayer) return;
+    await gameplayApi.submitInput({
+      room_id: roomId,
+      player_name: currentPlayer,
+      input_text: text,
+    });
+    await fetchRoomState();
+  };
 
+  const handleVote = async (chosenPlayer: string) => {
+    if (!roomId || !currentPlayer) return;
+    await gameplayApi.castVote({
+      room_id: roomId,
+      voter: currentPlayer,
+      chosen_player: chosenPlayer,
+    });
+    setHasVoted(true);
+    await fetchRoomState();
+  };
+
+  const handleAdvanceTurn = async () => {
+    if (!roomId) return;
+    try {
+      setShowResults(false);
+      setVotingResults(null);
+      await gameplayApi.advanceTurn(roomId);
+      await fetchRoomState();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to advance turn');
+    }
+  };
+
+  const handleContinue = async () => {
+    if (!roomId) return;
+    try {
+      await fetchRoomState();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to continue');
+    }
+  };
+
+  const handleInputTimeout = async (currentInput: string) => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('⏰ [Game] Input timeout triggered!');
+    console.log('⏰ [Game] Draft input received (NOT submitting):', currentInput);
+    console.log('⏰ [Game] Draft length:', currentInput.length);
+    console.log('⏰ [Game] Policy: No auto-submit on timeout - draft discarded');
+    console.log('⏰ [Game] Room ID:', roomId);
+    console.log('⏰ [Game] Current Player:', currentPlayer);
+    console.log('═══════════════════════════════════════════════════════');
+
+    if (!roomId || !currentPlayer) {
+      console.error('❌ [Game] Missing roomId or currentPlayer, aborting timeout handler');
+      return;
+    }
+
+    // Check if already submitted manually (before timeout)
+    console.log('🔍 [Game] Checking if player already submitted manually...');
+    const alreadySubmitted = roomState.player_inputs.some(i => i.player_name === currentPlayer);
+    console.log('🔍 [Game] Already submitted?', alreadySubmitted);
+
+    if (alreadySubmitted) {
+      console.log('✓ [Game] Player already submitted manually, no action needed');
+
+      // Check current phase before calling timeout handler
+      await fetchRoomState();
+      const updatedRoom = await roomsApi.getRoomState(roomId);
+
+      if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
+        console.log('📞 [Game] Calling backend timeout handler...');
+        try {
+          await gameplayApi.triggerInputTimeout(roomId);
+          console.log('✅ [Game] Backend timeout handler completed');
+        } catch (e) {
+          console.error('❌ [Game] Failed to trigger timeout:', e);
+        }
+        await fetchRoomState();
+      } else {
+        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
+      }
+      return;
+    }
+
+    console.log('⏰ [Game] Player did NOT submit manually - timing out without submission');
+    console.log('⏰ [Game] Draft discarded (length:', currentInput.length, ')');
+
+    try {
+      // Check current phase before calling timeout
+      console.log('🔄 [Game] Checking current phase before timeout call...');
+      await fetchRoomState();
+      const updatedRoom = await roomsApi.getRoomState(roomId);
+      console.log('📊 [Game] Current phase:', updatedRoom.phase);
+
+      // Only call timeout handler if still in PLAYER_INPUT phase
+      if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
+        console.log('📞 [Game] Phase is PLAYER_INPUT, calling timeout handler to mark player as timed out...');
+        await gameplayApi.triggerInputTimeout(roomId);
+        console.log('✅ [Game] Timeout handler called - player marked as timed out');
+
+        // Refresh state after timeout
+        console.log('🔄 [Game] Fetching updated state...');
+        await fetchRoomState();
+        console.log('✅ [Game] State refreshed');
+      } else {
+        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
+        console.log('⏩ [Game] Another player already triggered timeout, no action needed');
+        await fetchRoomState();
+      }
+
+    } catch (e) {
+      console.error('═══════════════════════════════════════════════════════');
+      console.error('❌ [Game] TIMEOUT HANDLING ERROR!');
+      console.error('❌ [Game] Error:', e);
+      console.error('═══════════════════════════════════════════════════════');
+      setError('An error occurred while handling the timeout.');
+    }
+  };
+
+  /* -----------------------------------------------------------------------
+     Render
+     ----------------------------------------------------------------------- */
   return (
     <div className="min-h-screen py-6">
       <div className="container mx-auto px-4">
-        {/* Game Header */}
+        {/* Header */}
         <div className="mb-6 bg-accent-black border-4 border-accent-white rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -288,10 +394,9 @@ export const Game: React.FC = () => {
         )}
 
         <div className="grid lg:grid-cols-4 gap-6">
-          {/* Main Content Area - 3 columns */}
+          {/* Main column */}
           <div className="lg:col-span-3">
-
-            {/* SCREEN 1: NARRATIVE SETUP (Generating Story Phase) */}
+            {/* GENERATING_STORY */}
             {roomState.phase === GamePhase.GENERATING_STORY && (
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
@@ -310,11 +415,7 @@ export const Game: React.FC = () => {
 
                   {!isStreaming && streamedText && (
                     <div className="mt-8 text-center">
-                      <Button
-                        size="lg"
-                        onClick={handleContinue}
-                        className="animate-pulse-glow"
-                      >
+                      <Button size="lg" onClick={handleContinue} className="animate-pulse-glow">
                         Continue
                       </Button>
                     </div>
@@ -332,7 +433,7 @@ export const Game: React.FC = () => {
               </div>
             )}
 
-            {/* SCREEN 2: DECISION INPUT PHASE (Player Input Phase) */}
+            {/* PLAYER_INPUT */}
             {roomState.phase === GamePhase.PLAYER_INPUT && (
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
@@ -342,41 +443,34 @@ export const Game: React.FC = () => {
                     </h2>
                     <div className="h-1 w-full bg-primary rounded mb-6"></div>
 
-                    {/* Show the last story segment as context */}
                     {roomState.story_history.length > 0 && (
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
-                        <ReactMarkdown
-                          components={{
-                            p: ({node, ...props}) => <p className="mb-4 text-accent-white font-semibold text-lg leading-relaxed" {...props} />,
-                            strong: ({node, ...props}) => <strong className="text-primary font-black" {...props} />,
-                            em: ({node, ...props}) => <em className="text-primary-400 font-bold" {...props} />,
-                            h1: ({node, ...props}) => <h1 className="text-3xl font-black text-primary mb-4 uppercase" {...props} />,
-                            h2: ({node, ...props}) => <h2 className="text-2xl font-black text-primary mb-3 uppercase" {...props} />,
-                            h3: ({node, ...props}) => <h3 className="text-xl font-black text-primary mb-2 uppercase" {...props} />,
-                            ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-                            ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-                            li: ({node, ...props}) => <li className="text-accent-white font-semibold" {...props} />,
-                            blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
-                          }}
-                        >
+                        <ReactMarkdown components={markdownComponents}>
                           {cleanStoryText(roomState.story_history[roomState.story_history.length - 1].content)}
                         </ReactMarkdown>
                       </div>
                     )}
 
-                    {/* Status display (if present) */}
                     <StatusDisplay status={currentDecisionData.status} />
 
                     <div className="text-center mb-8">
                       <p className="text-2xl font-black text-accent-white uppercase tracking-wide">
-                        {currentDecisionData.decision || "What will the character do next?"}
+                        {currentDecisionData.decision || 'What will the character do next?'}
                       </p>
                     </div>
+
+                    {timedOutPlayers.length > 0 && (
+                      <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
+                        <p className="text-accent-white font-bold text-center">
+                          Timer: {timedOutPlayers.join(', ')} did not submit in time
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <PlayerInput
                     onSubmit={handleSubmitInput}
-                    hasSubmitted={hasSubmittedInput || !!currentInput}
+                    hasSubmitted={hasSubmitted}
                     submissionCount={roomState.player_inputs.length}
                     totalPlayers={roomState.players.length}
                     timerStartTime={timerStartTime}
@@ -386,16 +480,15 @@ export const Game: React.FC = () => {
               </div>
             )}
 
-            {/* SCREEN 3: VOTING PHASE */}
+            {/* VOTING */}
             {roomState.phase === GamePhase.VOTING && (
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
-                    {/* Show timed out players */}
                     {timedOutPlayers.length > 0 && (
                       <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
                         <p className="text-accent-white font-bold text-center">
-                          ⏰ {timedOutPlayers.join(', ')} did not submit in time
+                          Timer: {timedOutPlayers.join(', ')} did not submit in time
                         </p>
                       </div>
                     )}
@@ -405,15 +498,12 @@ export const Game: React.FC = () => {
                     </h2>
                     <div className="h-1 w-full bg-primary rounded mb-6"></div>
 
-                    {/* Decision Reminder */}
                     {!showResults && (
                       <>
-                        {/* Status display (if present) */}
                         <StatusDisplay status={currentDecisionData.status} />
-
                         <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6">
                           <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide">
-                            "{currentDecisionData.decision || "What will the character do next?"}"
+                            "{currentDecisionData.decision || 'What will the character do next?'}"
                           </p>
                         </div>
                       </>
@@ -422,7 +512,6 @@ export const Game: React.FC = () => {
 
                   {showResults && votingResults ? (
                     <div className="space-y-6">
-                      {/* Winner Announcement */}
                       <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-accent-white">
                         <div className="text-6xl mb-4">🏆</div>
                         <h3 className="text-4xl font-black text-accent-white uppercase mb-2">
@@ -433,28 +522,30 @@ export const Game: React.FC = () => {
                         </p>
                       </div>
 
-                      {/* Vote Counts */}
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg">
                         <h4 className="text-xl font-black text-accent-white uppercase mb-4 text-center">
                           Vote Breakdown
                         </h4>
                         <div className="space-y-3">
-                          {Object.entries(votingResults.vote_counts).map(([player, votes]: [string, any]) => (
-                            <div key={player} className="flex justify-between items-center bg-accent-white bg-opacity-10 p-3 rounded">
-                              <span className="font-bold text-accent-white">{player}</span>
-                              <span className="text-primary font-black text-xl">{votes} {votes === 1 ? 'vote' : 'votes'}</span>
-                            </div>
-                          ))}
+                          {Object.entries(votingResults.vote_counts).map(([player, voteCount]) => {
+                            const votes = Number(voteCount) || 0;
+                            return (
+                              <div
+                                key={player}
+                                className="flex justify-between items-center bg-accent-white bg-opacity-10 p-3 rounded"
+                              >
+                                <span className="font-bold text-accent-white">{player}</span>
+                                <span className="text-primary font-black text-xl">
+                                  {votes} {votes === 1 ? 'vote' : 'votes'}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
-                      {/* Continue Button */}
                       <div className="text-center">
-                        <Button
-                          size="lg"
-                          onClick={handleAdvanceTurn}
-                          className="animate-pulse-glow"
-                        >
+                        <Button size="lg" onClick={handleAdvanceTurn} className="animate-pulse-glow">
                           Continue Story
                         </Button>
                       </div>
@@ -472,7 +563,7 @@ export const Game: React.FC = () => {
             )}
           </div>
 
-          {/* Sidebar - Player Status (Persistent) - 1 column */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6">
               <PlayerStatus

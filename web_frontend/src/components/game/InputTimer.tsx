@@ -17,7 +17,16 @@ export const InputTimer: React.FC<InputTimerProps> = ({
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
   useEffect(() => {
-    if (!startTime) return;
+    console.log('⏱️ [InputTimer] useEffect triggered');
+    console.log('⏱️ [InputTimer] startTime:', startTime);
+    console.log('⏱️ [InputTimer] timeoutSeconds:', timeoutSeconds);
+
+    if (!startTime) {
+      console.warn('⚠️ [InputTimer] No startTime provided, timer will not run');
+      return;
+    }
+
+    console.log('✅ [InputTimer] Starting timer...');
 
     const calculateTimeRemaining = () => {
       const start = new Date(startTime).getTime();
@@ -33,15 +42,24 @@ export const InputTimer: React.FC<InputTimerProps> = ({
       setTimeRemaining(remaining);
 
       if (remaining === 0 && !hasTimedOut) {
+        console.log('⏰⏰⏰ [InputTimer] TIME IS UP! Triggering timeout...');
+        console.log('⏰ [InputTimer] hasTimedOut was:', hasTimedOut);
         setHasTimedOut(true);
+        console.log('⏰ [InputTimer] Calling onTimeout callback...');
         onTimeout();
+        console.log('⏰ [InputTimer] onTimeout callback completed');
       }
     }, 1000);
 
     // Initial calculation
-    setTimeRemaining(calculateTimeRemaining());
+    const initialRemaining = calculateTimeRemaining();
+    console.log('⏱️ [InputTimer] Initial time remaining:', initialRemaining, 'seconds');
+    setTimeRemaining(initialRemaining);
 
-    return () => clearInterval(interval);
+    return () => {
+      console.log('⏱️ [InputTimer] Cleaning up interval');
+      clearInterval(interval);
+    };
   }, [startTime, timeoutSeconds, hasTimedOut, onTimeout]);
 
   const minutes = Math.floor(timeRemaining / 60);

@@ -6,20 +6,22 @@ interface PlayerListProps {
   players: string[];
   currentPlayer: string | null;
   maxPlayers?: number;
+  host?: string;
 }
 
 export const PlayerList: React.FC<PlayerListProps> = ({
   players,
   currentPlayer,
   maxPlayers = 10,
+  host,
 }) => {
   const emptySlots = maxPlayers - players.length;
 
   return (
     <div className="space-y-3">
-      {players.map((player, index) => {
+      {players.map((player) => {
         const isCurrentPlayer = player === currentPlayer;
-        const isHost = index === 0;
+        const isHost = player === host;
 
         return (
           <div

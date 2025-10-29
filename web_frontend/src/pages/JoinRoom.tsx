@@ -58,15 +58,14 @@ export const JoinRoom: React.FC = () => {
         ? error.message 
         : 'Failed to join room';
   
-      // Check if it's a room-specific error
-      if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+      if (errorMessage.includes('already taken')) {
+        setErrors({ playerName: errorMessage });
+      } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
         setErrors({ roomCode: 'Room not found. Please check the code.' });
       } else if (errorMessage.includes('full')) {
         setErrors({ roomCode: 'Room is full. Cannot join.' });
       } else if (errorMessage.includes('started') || errorMessage.includes('game already')) {
         setErrors({ roomCode: 'Game has already started. Cannot join.' });
-      } else if (errorMessage.includes('duplicate') || errorMessage.includes('already taken')) {
-        setErrors({ playerName: 'This name is already taken in the room.' });
       } else {
         setErrors({ roomCode: errorMessage });
       }

@@ -29,8 +29,12 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
 
     try {
       await onVote(selectedPlayer);
-    } catch (err: any) {
-      setError(err.message || 'Failed to cast vote');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to cast vote');
+      } else {
+        setError('An unknown error occurred.');
+      }
       setIsSubmitting(false);
     }
   };

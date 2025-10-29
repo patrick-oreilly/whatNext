@@ -37,9 +37,9 @@ logger = logging.getLogger(__name__)
 # Global managers
 
 storage = create_storage(settings.STORAGE_TYPE)
-room_manager = RoomManager(storage)
-session_manager = SessionManager()
 story_generator = StoryGenerator()
+room_manager = RoomManager(storage, story_generator)
+session_manager = SessionManager()
 
 # Background tasks
 
@@ -274,13 +274,43 @@ async def trigger_input_timeout(room_id: str):
 
     Used when timer expires on client side
     """
-    room_manager.handle_input_timeout(room_id)
+    logger.info("=" * 80)
+    logger.info(f"🔥 TIMEOUT ENDPOINT CALLED for room {room_id}")
+    logger.info("=" * 80)
 
-    return {
-        "status": "timeout_handled",
-        "room_id": room_id,
-        "phase": room_manager.get_room(room_id).phase
-    }
+    try:
+        room = room_manager.get_room(room_id)
+        logger.info(f"📊 Room state BEFORE timeout handling:")
+        logger.info(f"   - Phase: {room.phase}")
+        logger.info(f"   - Players: {room.players}")
+        logger.info(f"   - Player inputs count: {len(room.player_inputs)}")
+        logger.info(f"   - Player inputs: {[inp.player_name for inp in room.player_inputs]}")
+        logger.info(f"   - Timed out players: {room.timed_out_players}")
+
+        logger.info(f"🎯 Calling room_manager.handle_input_timeout('{room_id}')...")
+        room_manager.handle_input_timeout(room_id)
+        logger.info(f"✅ handle_input_timeout completed")
+
+        # Get updated room state
+        room = room_manager.get_room(room_id)
+        logger.info(f"📊 Room state AFTER timeout handling:")
+        logger.info(f"   - Phase: {room.phase}")
+        logger.info(f"   - Player inputs count: {len(room.player_inputs)}")
+        logger.info(f"   - Timed out players: {room.timed_out_players}")
+
+        result = {
+            "status": "timeout_handled",
+            "room_id": room_id,
+            "phase": room.phase
+        }
+        logger.info(f"📤 Returning response: {result}")
+        logger.info("=" * 80)
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ ERROR in timeout endpoint: {e}", exc_info=True)
+        raise
 
 @app.delete("/api/rooms/{room_id}")
 async def delete_room(room_id: str):
