@@ -31,7 +31,14 @@ export const createStoryStream = (
       callbacks.onError(new Error(errorMessage || 'Stream error occurred'));
       eventSource.close();
     } else {
-      callbacks.onChunk(data);
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.paragraph) {
+          callbacks.onChunk(parsed.paragraph);
+        }
+      } catch (e) {
+        // Ignore parsing errors, could be a partial message
+      }
     }
   };
 

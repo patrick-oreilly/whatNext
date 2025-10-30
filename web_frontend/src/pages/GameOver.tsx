@@ -6,6 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
 import { roomsApi } from '../api/rooms';
 import { useGameStore } from '../store/gameStore';
+import { Icon } from '../components/common/Icon';
+import { Crown, PartyPopper, Trophy } from 'lucide-react';
 
 export const GameOver: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -74,7 +76,7 @@ export const GameOver: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           {/* Winner Announcement */}
           <Card className="text-center mb-8 bg-gradient-intense border-4 border-accent-white">
-            <div className="text-8xl mb-6">🏆</div>
+            <Icon icon={Trophy} strokeWidth={1} size={104} className="mx-auto mb-6 text-accent-white" />
             <h1 className="font-display text-6xl font-black text-accent-white uppercase tracking-tight mb-4">
               Game Over!
             </h1>
@@ -85,8 +87,9 @@ export const GameOver: React.FC = () => {
               {winner[1]} {winner[1] === 1 ? 'point' : 'points'}
             </p>
             {winner[0] === currentPlayer && (
-              <div className="mt-6 text-2xl text-accent-white font-black uppercase animate-pulse">
-                Congratulations! 🎉
+              <div className="mt-6 flex items-center justify-center space-x-3 text-2xl text-accent-white font-black uppercase animate-pulse">
+                <Icon icon={PartyPopper} size={32} className="text-accent-white" />
+                <span>Congratulations!</span>
               </div>
             )}
           </Card>
@@ -118,8 +121,9 @@ export const GameOver: React.FC = () => {
                         {player === currentPlayer && <span className="text-sm ml-2">(YOU)</span>}
                       </div>
                       {index === 0 && (
-                        <div className="text-sm text-accent-white font-black uppercase tracking-wide">
-                          👑 Champion!
+                        <div className="flex items-center space-x-2 text-sm text-accent-white font-black uppercase tracking-wide">
+                          <Icon icon={Crown} size={18} className="text-accent-white" />
+                          <span>Champion!</span>
                         </div>
                       )}
                     </div>
@@ -169,7 +173,7 @@ export const GameOver: React.FC = () => {
                           blockquote: ({ ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
                         }}
                       >
-                        {segment.content}
+                        {segment.content.paragraph}
                       </ReactMarkdown>
                     </div>
                   </div>

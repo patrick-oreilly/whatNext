@@ -8,7 +8,7 @@ from collections import defaultdict
 
 from backend.core.models import (
     GameRoom, GamePhase, StoryLineType, PlayerInput,
-    StorySegment, RoomStateResponse, VotingResultsResponse
+    StorySegment, RoomStateResponse, VotingResultsResponse, LlmOutput
 )
 from backend.core.storage import Storage
 from backend.core.errors import (
@@ -431,7 +431,7 @@ class RoomManager:
     def add_story_segment(
         self,
         room_id: str,
-        content: str,
+        content: 'LlmOutput',
         winning_player: Optional[str] = None
     ) -> None:
         """Add a story segment to the room history"""

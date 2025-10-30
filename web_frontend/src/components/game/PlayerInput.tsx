@@ -5,6 +5,8 @@ import { Button } from '../common';
 import { InputTimer } from './InputTimer';
 import { validatePlayerInput } from '../../utils/validation';
 import { MIN_INPUT_LENGTH, MAX_INPUT_LENGTH } from '../../utils/constants';
+import { Icon } from '../common/Icon';
+import { CheckCircle2 } from 'lucide-react';
 
 interface PlayerInputProps {
   onSubmit: (text: string) => Promise<void>;
@@ -87,9 +89,7 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
         <div>
           <div className="bg-primary bg-opacity-20 border-4 border-primary rounded-lg p-6 mb-6">
             <div className="flex items-center space-x-3 text-primary mb-4">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <Icon icon={CheckCircle2} size={28} className="text-primary" />
               <span className="font-black uppercase text-lg tracking-wide">Submitted!</span>
             </div>
             <p className="text-accent-white font-semibold text-base leading-relaxed whitespace-pre-wrap">

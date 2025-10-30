@@ -3,6 +3,28 @@ from typing import List, Dict, Optional
 from datetime import datetime
 from enum import Enum
 
+
+class LlmOutput(BaseModel):
+    paragraph: str = Field(
+        description="A vivid, narrative paragraph describing the play (1-3 sentences)."
+    )
+    status: Optional[str] = Field(
+        default=None,
+        description="Current game status update (e.g., 'Momentum swinging', 'Lead extended', 'Timeout called'). Null if story has ended."
+    )
+    decision: Optional[str] = Field(
+        default=None,
+        description="The player's next decision prompt (e.g., 'Press full-court or drop back?'). Null if story has ended."
+    )
+    has_story_ended: bool = Field(
+        default=False,
+        description="True if the game has ended."
+    )
+    ending_summary: Optional[str] = Field(
+        default=None,
+        description="A summary of the story's ending. Only provided when has_story_ended is True."
+    )
+
 # ENUM data models
 
 class GamePhase(str, Enum):
@@ -12,6 +34,7 @@ class GamePhase(str, Enum):
     PLAYER_INPUT = "player_input"
     VOTING = "voting"
     GAME_OVER = "game_over"
+
 
 
 class StoryLineType(str, Enum):
@@ -39,7 +62,7 @@ class PlayerInput(BaseModel):
 class StorySegment(BaseModel):
     """A segment of the story"""
     turn: int
-    content: str
+    content: LlmOutput
     winning_player: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
 

@@ -4,11 +4,13 @@ from .prompts import BASE_PROMPT, HOOP_DREAMS_PROMPT
 from dotenv import load_dotenv
 import os
 from ..core.config import settings
+from ..core.models import LlmOutput
 
 # Game master agent
 root_agent = LlmAgent(
     model=settings.MODEL_NAME,
     name='root_agent',
     description='A game master that can create a story for a group of players.',
+    output_schema=LlmOutput,
     instruction=BASE_PROMPT,
 )

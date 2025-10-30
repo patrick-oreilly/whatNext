@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
@@ -12,7 +13,7 @@ from google.genai.types import Part, Content
 from backend.core.models import (
     CreateRoomRequest, JoinRoomRequest, SubmitInputRequest,
     CastVoteRequest, RoomCreatedResponse, JoinRoomResponse,
-    HealthResponse, GamePhase
+    HealthResponse, GamePhase, LlmOutput
 )
 from backend.game_management.room_manager import RoomManager
 from backend.session_management.session_manager import SessionManager
@@ -598,7 +599,7 @@ async def stream_story(room_id: str):
         """Generate Server-Sent Events from ADK"""
         try:
             full_response = ""
-            chunks = []
+            paragraph_chunks = []
 
             # Get the prepared prompt from room
             room = room_manager.get_room(room_id)
@@ -610,47 +611,85 @@ async def stream_story(room_id: str):
 
             message = room.next_prompt
 
-            # Stream response
+            # Collect complete response (ADK with output_schema returns JSON)
+            logger.info(f"Collecting structured response from ADK for room {room_id}")
+            json_objects = []
             async for chunk in session_manager.stream_response(room_id, message):
                 full_response += chunk
-                chunks.append(chunk)
+                logger.debug(f"Received chunk: {chunk[:100]}...")
 
-                # Send chunk to client in SSE format
+            logger.info(f"Complete response received (length={len(full_response)})")
+            logger.debug(f"Full response: {full_response}")
+
+            # Parse the JSON response into structured LlmOutput
+            # ADK may send JSON multiple times (partial + final), extract first valid object
+            try:
+                # Try to find first JSON object in response
+                # Look for pattern: { ... }
+                import re
+                json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                matches = re.findall(json_pattern, full_response, re.DOTALL)
+
+                if matches:
+                    # Use first valid JSON object
+                    first_json = matches[0]
+                    logger.debug(f"Extracted first JSON object: {first_json[:200]}...")
+                    story_data = json.loads(first_json)
+                    llm_output = LlmOutput(**story_data)
+                    logger.info(f"Successfully parsed structured output: has_story_ended={llm_output.has_story_ended}")
+                else:
+                    raise ValueError("No JSON object found in response")
+
+            except (json.JSONDecodeError, ValueError, Exception) as e:
+                logger.error(f"Failed to parse structured output: {e}")
+                logger.error(f"Raw response: {full_response}")
+                # Fallback: create a basic output with the raw text as paragraph
+                llm_output = LlmOutput(
+                    paragraph=full_response,
+                    status="Error parsing response",
+                    decision="Continue?",
+                    has_story_ended=False
+                )
+
+            # Stream the paragraph text with typing effect
+            paragraph_text = llm_output.paragraph
+            chunk_size = 15  # Characters per chunk for smooth streaming
+
+            for i in range(0, len(paragraph_text), chunk_size):
+                chunk = paragraph_text[i:i + chunk_size]
+                paragraph_chunks.append(chunk)
                 yield f"data: {chunk}\n\n"
+                await asyncio.sleep(0.02)  # Slight delay for typing effect
 
-                # Small delay for smooth streaming
-                await asyncio.sleep(0.01)
-            
             # Store cached chunks for late joiners
             async with active_streams_lock:
                 if stream_key in active_streams:
-                    active_streams[stream_key]["response"] = chunks
+                    active_streams[stream_key]["response"] = paragraph_chunks
 
             # Clear the prompt after use
             room = room_manager.get_room(room_id)
             room.next_prompt = None
             room_manager.storage.save_room(room)
 
-            # Store complete story segment
+            # Store complete story segment with structured content
             room_manager.add_story_segment(
                 room_id=room_id,
-                content=full_response,
+                content=llm_output,
                 winning_player=None
             )
 
-            # Check if story contains [END] marker
-            # Don't immediately end game - let user see the final story first
+            # Check if story has ended based on structured flag
             room = room_manager.get_room(room_id)
 
-            if "[END]" in full_response or "[end]" in full_response.lower():
-                logger.info(f"🏁 [END] flag detected in story for room {room_id}")
+            if llm_output.has_story_ended:
+                logger.info(f"🏁 Story has ended flag set for room {room_id}")
                 logger.info(f"Setting story_has_ended flag, staying in GENERATING_STORY phase for user to read")
                 room.story_has_ended = True
                 room_manager.storage.save_room(room)
                 # Stay in GENERATING_STORY phase so user can read the final story
                 # When they click "Continue", we'll transition to GAME_OVER
             else:
-                # No [END] marker - continue game normally
+                # Story continues - move to player input
                 if room.turn == 1:
                     # After opening, move to player input
                     room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)

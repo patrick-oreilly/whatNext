@@ -10,6 +10,8 @@ import { useGameStore } from '../store/gameStore';
 import { GamePhase } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
 import { usePolling } from '../hooks';
+import { Icon } from '../components/common/Icon';
+import { AlertTriangle } from 'lucide-react';
 
 export const Lobby: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -78,7 +80,7 @@ export const Lobby: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-md mx-auto text-center bg-accent-black border-4 border-accent-white">
-          <div className="text-primary text-6xl mb-4">⚠️</div>
+          <Icon icon={AlertTriangle} strokeWidth={1} size={72} className="mx-auto mb-4 text-primary" />
           <h2 className="font-display text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
           <p className="text-accent-white font-bold mb-6">{error}</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>

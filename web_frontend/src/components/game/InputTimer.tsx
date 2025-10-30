@@ -1,6 +1,8 @@
 // Input timer component for player input phase
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '../common/Icon';
+import { AlarmClock } from 'lucide-react';
 
 interface InputTimerProps {
   startTime: string | null;  // ISO timestamp
@@ -72,9 +74,11 @@ export const InputTimer: React.FC<InputTimerProps> = ({
         ? 'bg-red-500 bg-opacity-10 animate-pulse'
         : 'bg-accent-white bg-opacity-5'
     }`}>
-      <svg className={`w-4 h-4 ${isUrgent ? 'text-red-400' : 'text-accent-white opacity-60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
+      <Icon
+        icon={AlarmClock}
+        size={18}
+        className={isUrgent ? 'text-red-400' : 'text-accent-white opacity-60'}
+      />
       <span className={`font-bold text-sm ${
         isUrgent ? 'text-red-400' : 'text-accent-white opacity-60'
       }`}>

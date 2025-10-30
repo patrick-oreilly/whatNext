@@ -1,6 +1,8 @@
 // Voting timer component for voting phase
 
 import React, { useEffect, useState, useRef } from 'react';
+import { Icon } from '../common/Icon';
+import { Timer } from 'lucide-react';
 
 interface VotingTimerProps {
   startTime: string | null;  // ISO timestamp
@@ -84,11 +86,11 @@ export const VotingTimer: React.FC<VotingTimerProps> = ({
         ? 'bg-red-500 bg-opacity-10 animate-pulse'
         : 'bg-purple-500 bg-opacity-10'
     }`}>
-      <svg className={`w-4 h-4 ${
-        isUrgent ? 'text-red-400' : 'text-purple-400'
-      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
+      <Icon
+        icon={Timer}
+        size={18}
+        className={isUrgent ? 'text-red-400' : 'text-purple-400'}
+      />
       <span className={`font-bold text-sm ${
         isUrgent ? 'text-red-400' : 'text-purple-400'
       }`}>

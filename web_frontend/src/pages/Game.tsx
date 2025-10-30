@@ -10,13 +10,14 @@ import { PlayerInput } from '../components/game/PlayerInput';
 import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
 import { VotingTimer } from '../components/game/VotingTimer';
+import { Icon } from '../components/common/Icon';
 import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
 import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
 import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
-import { extractDecisionPrompt, extractStatus, cleanStoryText, hasEndMarker, extractEndSummary } from '../utils/storyHelpers';
+import { Dice5, Flag, Trophy } from 'lucide-react';
 
 /* -------------------------------------------------------------------------
    Markdown component map – defined once outside the component
@@ -48,17 +49,24 @@ export const Game: React.FC = () => {
      ALL HOOKS — TOP LEVEL, BEFORE ANY RETURN
      ----------------------------------------------------------------------- */
 
-  // 1. Decision data
+  // 1. Decision data - using structured backend response
   const currentDecisionData = useMemo(() => {
     if (!roomState?.story_history?.length) {
       return { decision: null, status: null };
     }
     const last = roomState.story_history[roomState.story_history.length - 1];
+    // Backend now sends structured data with decision and status fields
     return {
-      decision: extractDecisionPrompt(last.content),
-      status: extractStatus(last.content),
+      decision: last.content.decision,
+      status: last.content.status,
     };
   }, [roomState?.story_history]);
+
+  const DECISION_FALLBACK = 'How do you respond?';
+  const STATUS_FALLBACK = 'Age ?, Turn ?, Status unknown';
+  const resolvedDecisionPrompt = currentDecisionData.decision?.trim() || DECISION_FALLBACK;
+  const resolvedStatus = currentDecisionData.status?.trim() || STATUS_FALLBACK;
+  const isStatusFallback = !currentDecisionData.status;
 
   // 2. Background music
   useBackgroundMusic({
@@ -224,6 +232,32 @@ export const Game: React.FC = () => {
     }
   }, [roomState]);
 
+  useEffect(() => {
+    if (!roomState || roomState.phase !== GamePhase.PLAYER_INPUT) {
+      return;
+    }
+    const lastSegment = roomState.story_history[roomState.story_history.length - 1];
+    if (!currentDecisionData.decision) {
+      console.warn('[DecisionMissing]', {
+        roomId,
+        turn: roomState.turn,
+        content: lastSegment?.content ?? '',
+      });
+    }
+    if (!currentDecisionData.status) {
+      console.warn('[StatusMissing]', {
+        roomId,
+        turn: roomState.turn,
+        content: lastSegment?.content ?? '',
+      });
+    }
+  }, [
+    roomId,
+    roomState,
+    currentDecisionData.decision,
+    currentDecisionData.status,
+  ]);
+
   // 11. Detect when story has ended and show ending page
   useEffect(() => {
     // Check if backend flagged story as ended
@@ -233,18 +267,11 @@ export const Game: React.FC = () => {
       return;
     }
 
-    // Check if streamed text contains END marker
-    if (!isStreaming && streamedText && hasEndMarker(streamedText)) {
-      console.log('🏁 [Game] Story end detected in streamed text');
-      setShowEndingPage(true);
-      return;
-    }
-
-    // Check if last story segment contains END marker
+    // Check if last story segment has_story_ended flag
     if (roomState?.story_history?.length && roomState.phase === GamePhase.GENERATING_STORY) {
       const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-      if (hasEndMarker(lastSegment.content)) {
-        console.log('🏁 [Game] Story end detected in last story segment');
+      if (lastSegment.content.has_story_ended) {
+        console.log('🏁 [Game] Story end detected in last story segment (structured data)');
         setShowEndingPage(true);
         return;
       }
@@ -512,7 +539,7 @@ export const Game: React.FC = () => {
                     <div className="mt-8 space-y-6">
                       {/* Ending Page Display */}
                       <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-primary">
-                        <div className="text-6xl mb-4">🏁</div>
+                        <Icon icon={Flag} size={72} className="mx-auto mb-4 text-primary" />
                         <h3 className="text-4xl font-black text-accent-white uppercase mb-6">
                           Thanks For Playing!
                         </h3>
@@ -526,14 +553,10 @@ export const Game: React.FC = () => {
                               }}
                             >
                               {(() => {
-                                // Try to get ending summary from streamed text first
-                                if (streamedText && hasEndMarker(streamedText)) {
-                                  return extractEndSummary(streamedText) || 'The story has come to an end.';
-                                }
-                                // Fall back to last story segment
+                                // Get ending summary from structured backend data
                                 if (roomState?.story_history?.length) {
                                   const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-                                  return extractEndSummary(lastSegment.content) || 'The story has come to an end.';
+                                  return lastSegment.content.ending_summary || 'The story has come to an end.';
                                 }
                                 return 'The story has come to an end.';
                               })()}
@@ -580,12 +603,12 @@ export const Game: React.FC = () => {
                     {roomState.story_history.length > 0 && (
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
                         <ReactMarkdown components={markdownComponents}>
-                          {cleanStoryText(roomState.story_history[roomState.story_history.length - 1].content)}
+                          {roomState.story_history[roomState.story_history.length - 1].content.paragraph}
                         </ReactMarkdown>
                       </div>
                     )}
 
-                    <StatusDisplay status={currentDecisionData.status} />
+                    <StatusDisplay status={resolvedStatus} isFallback={isStatusFallback} />
 
                     <div className="text-center mb-8 prose prose-invert prose-lg max-w-none">
                       <ReactMarkdown
@@ -595,7 +618,7 @@ export const Game: React.FC = () => {
                           em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
                         }}
                       >
-                        {currentDecisionData.decision || 'What will the character do next?'}
+                        {resolvedDecisionPrompt}
                       </ReactMarkdown>
                     </div>
 
@@ -640,7 +663,7 @@ export const Game: React.FC = () => {
 
                     {!showResults && (
                       <>
-                        <StatusDisplay status={currentDecisionData.status} />
+                        <StatusDisplay status={resolvedStatus} isFallback={isStatusFallback} />
                         <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
                           <ReactMarkdown
                             components={{
@@ -649,7 +672,7 @@ export const Game: React.FC = () => {
                               em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
                             }}
                           >
-                            {`"${currentDecisionData.decision || 'What will the character do next?'}"`}
+                            {`"${resolvedDecisionPrompt}"`}
                           </ReactMarkdown>
                         </div>
                       </>
@@ -659,21 +682,26 @@ export const Game: React.FC = () => {
                   {showResults && votingResults ? (
                     <div className="space-y-6">
                       <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-accent-white">
-                        <div className="text-6xl mb-4">🏆</div>
+                        <Icon icon={Trophy} size={80} className="mx-auto mb-4 text-accent-white" />
 
                         {/* Tie Indicator */}
-                        {votingResults.was_tie && votingResults.tied_players && votingResults.tied_players.length > 1 && (
-                          <div className="mb-4 bg-yellow-500 bg-opacity-20 border-2 border-yellow-500 rounded-lg p-3">
-                            <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide">
-                              🎲 Tie! {votingResults.tied_players.join(', ')} all received{' '}
-                              {Math.max(...Object.values(votingResults.vote_counts))}{' '}
-                              {Math.max(...Object.values(votingResults.vote_counts)) === 1 ? 'vote' : 'votes'}
-                            </p>
-                            <p className="text-accent-white font-semibold text-xs mt-1">
-                              Winner selected randomly
-                            </p>
-                          </div>
-                        )}
+                        {votingResults.was_tie && votingResults.tied_players && votingResults.tied_players.length > 1 && (() => {
+                          const maxVotes = Math.max(...Object.values(votingResults.vote_counts));
+                          return (
+                            <div className="mb-4 bg-yellow-500 bg-opacity-20 border-2 border-yellow-500 rounded-lg p-3">
+                              <div className="flex items-center justify-center gap-2 text-yellow-400 font-bold text-sm uppercase tracking-wide">
+                                <Icon icon={Dice5} size={20} className="text-yellow-400" />
+                                <span>
+                                  Tie! {votingResults.tied_players.join(', ')} all received {maxVotes}{' '}
+                                  {maxVotes === 1 ? 'vote' : 'votes'}
+                                </span>
+                              </div>
+                              <p className="text-accent-white font-semibold text-xs mt-1">
+                                Winner selected randomly
+                              </p>
+                            </div>
+                          );
+                        })()}
 
                         <h3 className="text-4xl font-black text-accent-white uppercase mb-2">
                           {votingResults.winning_player} Wins!

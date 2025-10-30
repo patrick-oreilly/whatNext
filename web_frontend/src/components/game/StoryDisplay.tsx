@@ -3,7 +3,8 @@
 import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { StorySegment } from '../../types';
-import { cleanStoryText } from '../../utils/storyHelpers';
+import { Icon } from '../common/Icon';
+import { BookOpen } from 'lucide-react';
 
 interface StoryDisplayProps {
   segments: StorySegment[];
@@ -53,7 +54,7 @@ export const StoryDisplay: React.FC<StoryDisplayProps> = ({
                   blockquote: ({ ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
                 }}
               >
-                {cleanStoryText(segment.content)}
+                {segment.content.paragraph}
               </ReactMarkdown>
             </div>
           </div>
@@ -81,7 +82,7 @@ export const StoryDisplay: React.FC<StoryDisplayProps> = ({
                   blockquote: ({ ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />,
                 }}
               >
-                {cleanStoryText(streamingText)}
+                {streamingText}
               </ReactMarkdown>
               <span className="inline-block w-2 h-6 bg-primary animate-pulse ml-1 rounded" />
             </div>
@@ -93,7 +94,7 @@ export const StoryDisplay: React.FC<StoryDisplayProps> = ({
 
       {!isStreaming && segments.length === 0 && (
         <div className="text-center text-accent-white py-12">
-          <div className="text-6xl mb-4">📖</div>
+          <Icon icon={BookOpen} size={72} className="mx-auto mb-4 text-primary" />
           <p className="font-bold text-lg uppercase">Waiting for the story to begin...</p>
         </div>
       )}
