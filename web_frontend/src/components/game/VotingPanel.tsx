@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { Button } from '../common';
 import type { PlayerInput } from '../../types';
+import { Icon } from '../common/Icon';
+import { Check, CheckCircle2, CircleHelp } from 'lucide-react';
 
 interface VotingPanelProps {
   inputs: PlayerInput[];
@@ -44,9 +46,7 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
       {hasVoted ? (
         <div className="bg-primary bg-opacity-20 border-4 border-primary rounded-lg p-8 text-center">
           <div className="flex items-center justify-center space-x-3 text-primary mb-3">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <Icon icon={CheckCircle2} size={32} className="text-primary" />
             <span className="font-black uppercase text-2xl tracking-wide">Vote Submitted!</span>
           </div>
           <p className="text-accent-white font-bold text-lg uppercase tracking-wide">
@@ -73,9 +73,7 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
                       Option {index + 1}
                     </span>
                     {selectedPlayer === input.player_name && (
-                      <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                      <Icon icon={Check} size={24} className="text-primary" strokeWidth={3} />
                     )}
                   </div>
                   <p className="text-accent-white font-semibold text-base leading-relaxed whitespace-pre-wrap">
@@ -86,7 +84,7 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
 
             {inputs.filter((i) => i.player_name !== currentPlayer).length === 0 && (
               <div className="text-center py-12 bg-accent-white bg-opacity-10 rounded-lg">
-                <div className="text-6xl mb-4">🤷</div>
+                <Icon icon={CircleHelp} size={72} className="mx-auto mb-4 text-primary" />
                 <p className="text-accent-white font-bold text-lg uppercase tracking-wide">
                   No options to vote for
                 </p>

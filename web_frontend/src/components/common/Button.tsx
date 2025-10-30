@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   const baseClasses = 'font-black uppercase tracking-wide rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95';
 
   const variantClasses = {
-    primary: 'bg-accent-black hover:bg-gray-900 text-accent-white border-4 border-accent-white shadow-lg hover:shadow-2xl',
+    primary: 'bg-accent-white hover:bg-gray-200 text-accent-black border-4 border-transparent shadow-lg hover:shadow-2xl',
     secondary: 'bg-gradient-intense hover:bg-primary-700 text-accent-white border-4 border-accent-black shadow-lg hover:shadow-2xl',
     outline: 'border-4 border-accent-white bg-transparent text-accent-white hover:bg-accent-white hover:text-accent-black',
     danger: 'bg-red-600 hover:bg-red-700 text-accent-white border-4 border-accent-white shadow-lg hover:shadow-2xl',

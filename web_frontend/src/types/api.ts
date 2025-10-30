@@ -50,7 +50,10 @@ export interface RoomStateResponse {
   player_inputs: PlayerInput[];
   max_turns: number;
   input_phase_start_time?: string | null;
+  voting_phase_start_time?: string | null;  // NEW: For voting timer
+  voting_timeout_seconds?: number;
   timed_out_players?: string[];
+  story_has_ended?: boolean;
 }
 
 export interface VotingResultsResponse {
@@ -58,6 +61,8 @@ export interface VotingResultsResponse {
   winning_player: string;
   winning_input: string;
   vote_counts: Record<string, number>;
+  was_tie?: boolean;  // NEW: Was there a tie?
+  tied_players?: string[];  // NEW: Which players tied?
 }
 
 export interface HealthResponse {

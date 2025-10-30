@@ -1,12 +1,14 @@
 import string
 import random
 import logging
+import asyncio
 from typing import Optional, List, Dict
 from datetime import datetime
+from collections import defaultdict
 
 from backend.core.models import (
     GameRoom, GamePhase, StoryLineType, PlayerInput,
-    StorySegment, RoomStateResponse, VotingResultsResponse
+    StorySegment, RoomStateResponse, VotingResultsResponse, LlmOutput
 )
 from backend.core.storage import Storage
 from backend.core.errors import (
@@ -26,8 +28,23 @@ class RoomManager:
     def __init__(self, storage: Storage, story_generator=None):
         self.storage = storage
         self.story_generator = story_generator
-        logger.info("RoomManager initialized")
-    
+        # Locks for preventing race conditions in critical sections
+        self._room_locks: Dict[str, asyncio.Lock] = {}
+        self._locks_lock = asyncio.Lock()  # Lock for accessing the locks dict
+        logger.info("RoomManager initialized with race condition protection")
+
+    async def _get_room_lock(self, room_id: str) -> asyncio.Lock:
+        """
+        Get or create a lock for a specific room
+
+        This prevents race conditions when multiple clients access the same room
+        simultaneously (e.g., during voting results calculation).
+        """
+        async with self._locks_lock:
+            if room_id not in self._room_locks:
+                self._room_locks[room_id] = asyncio.Lock()
+            return self._room_locks[room_id]
+
   # Create and manage room methods
     
     def create_room(self, storyline: StoryLineType, max_turns: int = None) -> str:
@@ -85,7 +102,10 @@ class RoomManager:
             player_inputs=room.player_inputs,
             max_turns=room.max_turns,
             input_phase_start_time=room.input_phase_start_time,
-            timed_out_players=room.timed_out_players
+            voting_phase_start_time=room.voting_phase_start_time,
+            timed_out_players=room.timed_out_players,
+            story_has_ended=room.story_has_ended,
+            voting_timeout_seconds=settings.VOTING_TIMER_SECONDS
         )
     
     
@@ -204,18 +224,28 @@ class RoomManager:
         else:
             room.phase = GamePhase.PLAYER_INPUT
             logger.info(f"Advanced to turn {room.turn} in room {room_id}")
+
+        if room.phase != GamePhase.VOTING:
+            room.voting_phase_start_time = None
         
         self.storage.save_room(room)
     
     def set_phase(self, room_id: str, phase: GamePhase) -> None:
         """Set game phase"""
         room = self.get_room(room_id)
+        previous_phase = room.phase
         room.phase = phase
 
         # Start input phase timer
         if phase == GamePhase.PLAYER_INPUT:
             room.input_phase_start_time = datetime.now()
             room.timed_out_players = []  # Reset timeout tracking
+
+        if phase == GamePhase.VOTING:
+            if not room.voting_phase_start_time:
+                room.voting_phase_start_time = datetime.now()
+        elif previous_phase == GamePhase.VOTING:
+            room.voting_phase_start_time = None
 
         room.update_activity()
         self.storage.save_room(room)
@@ -277,6 +307,7 @@ class RoomManager:
             # Multiple submissions: proceed to voting
             logger.info(f"   → Path 1: MULTIPLE INPUTS ({len(room.player_inputs)}) - advancing to VOTING")
             room.phase = GamePhase.VOTING
+            room.voting_phase_start_time = datetime.now()
             room.update_activity()
             self.storage.save_room(room)
             logger.info(
@@ -331,6 +362,7 @@ class RoomManager:
             else:
                 logger.info(f"      Setting phase to GENERATING_STORY")
                 room.phase = GamePhase.GENERATING_STORY
+            room.voting_phase_start_time = None
 
             room.update_activity()
             self.storage.save_room(room)
@@ -386,6 +418,7 @@ class RoomManager:
 
             # Set phase to generating story
             room.phase = GamePhase.GENERATING_STORY
+            room.voting_phase_start_time = None
             room.update_activity()
             self.storage.save_room(room)
 
@@ -398,7 +431,7 @@ class RoomManager:
     def add_story_segment(
         self,
         room_id: str,
-        content: str,
+        content: 'LlmOutput',
         winning_player: Optional[str] = None
     ) -> None:
         """Add a story segment to the room history"""
@@ -496,6 +529,7 @@ class RoomManager:
             logger.info(f"🎉 ALL PLAYERS SUBMITTED!")
             logger.info(f"   → Automatically advancing to VOTING phase")
             room.phase = GamePhase.VOTING
+            room.voting_phase_start_time = datetime.now()
             logger.info(
                 f"✅ All players submitted in room {room_id} - automatically advancing to VOTING phase"
             )
@@ -592,41 +626,103 @@ class RoomManager:
         """Alias for record_vote for API compatibility"""
         return self.record_vote(room_id, voter, chosen_player)
 
-    def calculate_winner(self, room_id: str) -> VotingResultsResponse:
+    async def calculate_winner(self, room_id: str) -> VotingResultsResponse:
         """
         Calculate voting results and determine winner
 
+        Awards points to ALL players based on votes received (15 points per vote).
+        Uses idempotent logic to prevent awarding points multiple times.
+        Handles ties with random selection.
+
+        THREAD-SAFE: Uses asyncio.Lock to prevent race conditions when
+        multiple clients call this simultaneously.
+
         Returns:
-            VotingResultsResponse with winner and vote counts
+            VotingResultsResponse with winner, vote counts, and tie information
         """
-        room = self.get_room(room_id)
+        # 🔒 CRITICAL SECTION: Acquire lock to prevent race conditions
+        lock = await self._get_room_lock(room_id)
+        async with lock:
+            logger.debug(f"🔒 Acquired lock for calculate_winner in room {room_id}")
 
-        if not room.player_inputs:
-            raise VotingError("No player inputs to vote on")
+            room = self.get_room(room_id)
 
-        # Find input with most votes
-        winning_input = max(room.player_inputs, key=lambda inp: inp.votes)
+            if not room.player_inputs:
+                raise VotingError("No player inputs to vote on")
 
-        # Award points (15 points per vote)
-        room.scores[winning_input.player_name] += winning_input.votes * 15
+            # Find all inputs with most votes (for tie detection)
+            max_votes = max(inp.votes for inp in room.player_inputs)
+            tied_inputs = [inp for inp in room.player_inputs if inp.votes == max_votes]
 
-        # Build vote counts
-        vote_counts = {
-            inp.player_name: inp.votes
-            for inp in room.player_inputs
-        }
+            # Handle ties with random selection
+            winning_input = random.choice(tied_inputs)
 
-        room.update_activity()
-        self.storage.save_room(room)
+            was_tie = len(tied_inputs) > 1
+            tied_player_names = [inp.player_name for inp in tied_inputs]
 
-        logger.info(f"Voting winner in room {room_id}: '{winning_input.player_name}' with {winning_input.votes} votes")
+            if was_tie:
+                logger.info(
+                    f"🎲 Tie detected in room {room_id}: {len(tied_inputs)} players with {max_votes} votes. "
+                    f"Players: {tied_player_names}. Randomly selected '{winning_input.player_name}' as winner."
+                )
 
-        return VotingResultsResponse(
-            room_id=room_id,
-            winning_player=winning_input.player_name,
-            winning_input=winning_input.text,
-            vote_counts=vote_counts
-        )
+            # Build vote counts
+            vote_counts = {
+                inp.player_name: inp.votes
+                for inp in room.player_inputs
+            }
+
+            # 🛡️ IDEMPOTENT LOGIC: Check if points have already been awarded this turn
+            # This prevents multiple clients from awarding points multiple times
+            if room.points_awarded_turn is None or room.points_awarded_turn != room.turn:
+                logger.info(f"💰 Awarding points for turn {room.turn} in room {room_id}")
+
+                # Award points to ALL players based on votes received (15 points per vote)
+                for inp in room.player_inputs:
+                    points_earned = inp.votes * 15
+
+                    # Ensure player exists in scores dict
+                    if inp.player_name not in room.scores:
+                        room.scores[inp.player_name] = 0
+
+                    room.scores[inp.player_name] += points_earned
+
+                    if points_earned > 0:
+                        logger.info(
+                            f"  ✅ Awarded {points_earned} points to '{inp.player_name}' "
+                            f"({inp.votes} votes × 15 points)"
+                        )
+                    else:
+                        logger.debug(f"  ⚪ '{inp.player_name}' received 0 votes, no points awarded")
+
+                # Mark that points have been awarded for this turn
+                room.points_awarded_turn = room.turn
+
+                logger.info(f"✅ Points awarded for turn {room.turn} in room {room_id}")
+            else:
+                logger.warning(
+                    f"⚠️  Points already awarded for turn {room.turn} in room {room_id}, skipping. "
+                    f"This is expected if multiple clients called this endpoint."
+                )
+
+            room.update_activity()
+            self.storage.save_room(room)
+
+            logger.info(
+                f"🏆 Voting winner in room {room_id}: '{winning_input.player_name}' "
+                f"with {winning_input.votes} votes"
+            )
+
+            logger.debug(f"🔓 Releasing lock for calculate_winner in room {room_id}")
+
+            return VotingResultsResponse(
+                room_id=room_id,
+                winning_player=winning_input.player_name,
+                winning_input=winning_input.text,
+                vote_counts=vote_counts,
+                was_tie=was_tie,
+                tied_players=tied_player_names
+            )
 
     def get_winning_input(self, room_id: str) -> Optional[str]:
         """Get the winning input text from last voting round"""

@@ -9,13 +9,15 @@ import { StoryDisplay } from '../components/game/StoryDisplay';
 import { PlayerInput } from '../components/game/PlayerInput';
 import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
+import { VotingTimer } from '../components/game/VotingTimer';
+import { Icon } from '../components/common/Icon';
 import { roomsApi } from '../api/rooms';
 import { gameplayApi } from '../api/gameplay';
 import { useGameStore } from '../store/gameStore';
 import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
 import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
-import { extractDecisionPrompt, extractStatus, cleanStoryText } from '../utils/storyHelpers';
+import { Dice5, Flag, Trophy } from 'lucide-react';
 
 /* -------------------------------------------------------------------------
    Markdown component map – defined once outside the component
@@ -47,17 +49,24 @@ export const Game: React.FC = () => {
      ALL HOOKS — TOP LEVEL, BEFORE ANY RETURN
      ----------------------------------------------------------------------- */
 
-  // 1. Decision data
+  // 1. Decision data - using structured backend response
   const currentDecisionData = useMemo(() => {
     if (!roomState?.story_history?.length) {
       return { decision: null, status: null };
     }
     const last = roomState.story_history[roomState.story_history.length - 1];
+    // Backend now sends structured data with decision and status fields
     return {
-      decision: extractDecisionPrompt(last.content),
-      status: extractStatus(last.content),
+      decision: last.content.decision,
+      status: last.content.status,
     };
   }, [roomState?.story_history]);
+
+  const DECISION_FALLBACK = 'How do you respond?';
+  const STATUS_FALLBACK = 'Age ?, Turn ?, Status unknown';
+  const resolvedDecisionPrompt = currentDecisionData.decision?.trim() || DECISION_FALLBACK;
+  const resolvedStatus = currentDecisionData.status?.trim() || STATUS_FALLBACK;
+  const isStatusFallback = !currentDecisionData.status;
 
   // 2. Background music
   useBackgroundMusic({
@@ -78,7 +87,9 @@ export const Game: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
   const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
+  const [votingTimeoutSeconds, setVotingTimeoutSeconds] = useState<number>(60);
   const [timedOutPlayers, setTimedOutPlayers] = useState<string[]>([]);
+  const [showEndingPage, setShowEndingPage] = useState(false);
 
   // 4. Derived values (safe — after early returns)
   const currentInput = useMemo(
@@ -135,6 +146,11 @@ export const Game: React.FC = () => {
       }
 
       if (state.phase === GamePhase.VOTING && roomState?.phase !== GamePhase.VOTING) {
+        console.log('⏱️ [Game] Setting up VOTING phase timer');
+        console.log('⏱️ [Game] voting_phase_start_time from backend:', state.voting_phase_start_time);
+        console.log('⏱️ [Game] voting_timeout_seconds from backend:', state.voting_timeout_seconds);
+        setTimerStartTime(state.voting_phase_start_time ?? null);
+        setVotingTimeoutSeconds(state.voting_timeout_seconds ?? 60);
         setHasVoted(false);
         setVotingResults(null);
         setShowResults(false);
@@ -142,6 +158,7 @@ export const Game: React.FC = () => {
 
       if (state.turn !== roomState?.turn) {
         setLastStreamedTurn(null);
+        setShowEndingPage(false);
       }
 
       if (state.phase === GamePhase.VOTING && state.player_inputs.length) {
@@ -215,6 +232,52 @@ export const Game: React.FC = () => {
     }
   }, [roomState]);
 
+  useEffect(() => {
+    if (!roomState || roomState.phase !== GamePhase.PLAYER_INPUT) {
+      return;
+    }
+    const lastSegment = roomState.story_history[roomState.story_history.length - 1];
+    if (!currentDecisionData.decision) {
+      console.warn('[DecisionMissing]', {
+        roomId,
+        turn: roomState.turn,
+        content: lastSegment?.content ?? '',
+      });
+    }
+    if (!currentDecisionData.status) {
+      console.warn('[StatusMissing]', {
+        roomId,
+        turn: roomState.turn,
+        content: lastSegment?.content ?? '',
+      });
+    }
+  }, [
+    roomId,
+    roomState,
+    currentDecisionData.decision,
+    currentDecisionData.status,
+  ]);
+
+  // 11. Detect when story has ended and show ending page
+  useEffect(() => {
+    // Check if backend flagged story as ended
+    if (roomState?.story_has_ended && roomState.phase === GamePhase.GENERATING_STORY) {
+      console.log('🏁 [Game] Story end detected via story_has_ended flag');
+      setShowEndingPage(true);
+      return;
+    }
+
+    // Check if last story segment has_story_ended flag
+    if (roomState?.story_history?.length && roomState.phase === GamePhase.GENERATING_STORY) {
+      const lastSegment = roomState.story_history[roomState.story_history.length - 1];
+      if (lastSegment.content.has_story_ended) {
+        console.log('🏁 [Game] Story end detected in last story segment (structured data)');
+        setShowEndingPage(true);
+        return;
+      }
+    }
+  }, [isStreaming, streamedText, roomState?.story_has_ended, roomState?.story_history, roomState?.phase]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -282,6 +345,19 @@ export const Game: React.FC = () => {
       await fetchRoomState();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to continue');
+    }
+  };
+
+  const handleEndingPageContinue = async () => {
+    if (!roomId) return;
+    try {
+      console.log('🏁 Story has ended, calling endGame API to transition to GAME_OVER');
+      // Call API to properly end the game (set phase to GAME_OVER, close ADK session)
+      await gameplayApi.endGame(roomId);
+      // Navigate to game over screen
+      navigate(`/gameover/${roomId}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to end game');
     }
   };
 
@@ -362,6 +438,52 @@ export const Game: React.FC = () => {
     }
   };
 
+  const handleVotingTimeout = async () => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('⏰ [Game] Voting timeout triggered!');
+    console.log('⏰ [Game] Room ID:', roomId);
+    console.log('═══════════════════════════════════════════════════════');
+
+    if (!roomId) {
+      console.error('❌ [Game] Missing roomId, aborting voting timeout handler');
+      return;
+    }
+
+    try {
+      // Check current phase before calling timeout
+      console.log('🔄 [Game] Checking current phase before voting timeout call...');
+      const updatedRoom = await roomsApi.getRoomState(roomId);
+      console.log('📊 [Game] Current phase:', updatedRoom.phase);
+
+      // Only call timeout handler if still in VOTING phase
+      if (updatedRoom.phase === GamePhase.VOTING) {
+        console.log('📞 [Game] Phase is VOTING, calling voting timeout handler...');
+        await gameplayApi.triggerVotingTimeout(roomId);
+        console.log('✅ [Game] Voting timeout handled - calculating winner with current votes');
+
+        // Fetch voting results after timeout
+        console.log('🔄 [Game] Fetching voting results...');
+        await fetchVotingResults();
+        console.log('✅ [Game] Voting results fetched');
+
+        // Refresh room state
+        console.log('🔄 [Game] Fetching updated room state...');
+        await fetchRoomState();
+        console.log('✅ [Game] State refreshed');
+      } else {
+        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
+        console.log('⏩ [Game] Voting already completed, no action needed');
+        await fetchRoomState();
+      }
+    } catch (e) {
+      console.error('═══════════════════════════════════════════════════════');
+      console.error('❌ [Game] VOTING TIMEOUT HANDLING ERROR!');
+      console.error('❌ [Game] Error:', e);
+      console.error('═══════════════════════════════════════════════════════');
+      setError('An error occurred while handling voting timeout.');
+    }
+  };
+
   /* -----------------------------------------------------------------------
      Render
      ----------------------------------------------------------------------- */
@@ -413,7 +535,42 @@ export const Game: React.FC = () => {
                     isStreaming={isStreaming}
                   />
 
-                  {!isStreaming && streamedText && (
+                  {showEndingPage && (
+                    <div className="mt-8 space-y-6">
+                      {/* Ending Page Display */}
+                      <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-primary">
+                        <Icon icon={Flag} size={72} className="mx-auto mb-4 text-primary" />
+                        <h3 className="text-4xl font-black text-accent-white uppercase mb-6">
+                          Thanks For Playing!
+                        </h3>
+                        <div className="bg-accent-black bg-opacity-50 p-6 rounded-lg mb-6">
+                          <div className="prose prose-invert prose-lg max-w-none">
+                            <ReactMarkdown
+                              components={{
+                                p: ({ ...props }) => <p className="text-accent-white font-semibold text-xl leading-relaxed mb-4" {...props} />,
+                                strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
+                                em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
+                              }}
+                            >
+                              {(() => {
+                                // Get ending summary from structured backend data
+                                if (roomState?.story_history?.length) {
+                                  const lastSegment = roomState.story_history[roomState.story_history.length - 1];
+                                  return lastSegment.content.ending_summary || 'The story has come to an end.';
+                                }
+                                return 'The story has come to an end.';
+                              })()}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                        <Button size="lg" onClick={handleEndingPageContinue} className="animate-pulse-glow">
+                          View Final Results
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isStreaming && !showEndingPage && streamedText && (
                     <div className="mt-8 text-center">
                       <Button size="lg" onClick={handleContinue} className="animate-pulse-glow">
                         Continue
@@ -446,17 +603,23 @@ export const Game: React.FC = () => {
                     {roomState.story_history.length > 0 && (
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
                         <ReactMarkdown components={markdownComponents}>
-                          {cleanStoryText(roomState.story_history[roomState.story_history.length - 1].content)}
+                          {roomState.story_history[roomState.story_history.length - 1].content.paragraph}
                         </ReactMarkdown>
                       </div>
                     )}
 
-                    <StatusDisplay status={currentDecisionData.status} />
+                    <StatusDisplay status={resolvedStatus} isFallback={isStatusFallback} />
 
-                    <div className="text-center mb-8">
-                      <p className="text-2xl font-black text-accent-white uppercase tracking-wide">
-                        {currentDecisionData.decision || 'What will the character do next?'}
-                      </p>
+                    <div className="text-center mb-8 prose prose-invert prose-lg max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ ...props }) => <p className="text-2xl font-black text-accent-white uppercase tracking-wide" {...props} />,
+                          strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
+                          em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
+                        }}
+                      >
+                        {resolvedDecisionPrompt}
+                      </ReactMarkdown>
                     </div>
 
                     {timedOutPlayers.length > 0 && (
@@ -500,11 +663,17 @@ export const Game: React.FC = () => {
 
                     {!showResults && (
                       <>
-                        <StatusDisplay status={currentDecisionData.status} />
-                        <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6">
-                          <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide">
-                            "{currentDecisionData.decision || 'What will the character do next?'}"
-                          </p>
+                        <StatusDisplay status={resolvedStatus} isFallback={isStatusFallback} />
+                        <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              p: ({ ...props }) => <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide" {...props} />,
+                              strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
+                              em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
+                            }}
+                          >
+                            {`"${resolvedDecisionPrompt}"`}
+                          </ReactMarkdown>
                         </div>
                       </>
                     )}
@@ -513,7 +682,27 @@ export const Game: React.FC = () => {
                   {showResults && votingResults ? (
                     <div className="space-y-6">
                       <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-accent-white">
-                        <div className="text-6xl mb-4">🏆</div>
+                        <Icon icon={Trophy} size={80} className="mx-auto mb-4 text-accent-white" />
+
+                        {/* Tie Indicator */}
+                        {votingResults.was_tie && votingResults.tied_players && votingResults.tied_players.length > 1 && (() => {
+                          const maxVotes = Math.max(...Object.values(votingResults.vote_counts));
+                          return (
+                            <div className="mb-4 bg-yellow-500 bg-opacity-20 border-2 border-yellow-500 rounded-lg p-3">
+                              <div className="flex items-center justify-center gap-2 text-yellow-400 font-bold text-sm uppercase tracking-wide">
+                                <Icon icon={Dice5} size={20} className="text-yellow-400" />
+                                <span>
+                                  Tie! {votingResults.tied_players.join(', ')} all received {maxVotes}{' '}
+                                  {maxVotes === 1 ? 'vote' : 'votes'}
+                                </span>
+                              </div>
+                              <p className="text-accent-white font-semibold text-xs mt-1">
+                                Winner selected randomly
+                              </p>
+                            </div>
+                          );
+                        })()}
+
                         <h3 className="text-4xl font-black text-accent-white uppercase mb-2">
                           {votingResults.winning_player} Wins!
                         </h3>
@@ -551,12 +740,21 @@ export const Game: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <VotingPanel
-                      inputs={roomState.player_inputs}
-                      currentPlayer={currentPlayer}
-                      onVote={handleVote}
-                      hasVoted={hasVoted}
-                    />
+                    <div className="space-y-4">
+                      <div className="flex justify-center">
+                        <VotingTimer
+                          startTime={timerStartTime}
+                          timeoutSeconds={votingTimeoutSeconds}
+                          onTimeout={handleVotingTimeout}
+                        />
+                      </div>
+                      <VotingPanel
+                        inputs={roomState.player_inputs}
+                        currentPlayer={currentPlayer}
+                        onVote={handleVote}
+                        hasVoted={hasVoted}
+                      />
+                    </div>
                   )}
                 </Card>
               </div>
@@ -565,7 +763,7 @@ export const Game: React.FC = () => {
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="sticky top-6">
+            <div className="sticky top-6 space-y-6">
               <PlayerStatus
                 players={roomState.players}
                 scores={roomState.scores}

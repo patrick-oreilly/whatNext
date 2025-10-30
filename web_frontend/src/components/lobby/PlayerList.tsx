@@ -1,6 +1,8 @@
 // Player list component for lobby
 
 import React from 'react';
+import { Icon } from '../common/Icon';
+import { Users } from 'lucide-react';
 
 interface PlayerListProps {
   players: string[];
@@ -16,60 +18,71 @@ export const PlayerList: React.FC<PlayerListProps> = ({
   host,
 }) => {
   const emptySlots = maxPlayers - players.length;
+  const allSlots = [
+    ...players.map(player => ({ type: 'player' as const, player })),
+    ...Array.from({ length: emptySlots }, () => ({ type: 'empty' as const }))
+  ];
 
   return (
-    <div className="space-y-3">
-      {players.map((player) => {
-        const isCurrentPlayer = player === currentPlayer;
-        const isHost = player === host;
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-4 mt-6">
+        <Icon icon={Users} size={24} className="text-primary" />
+        <h2 className="text-xl font-black text-primary uppercase tracking-tight">
+          Players ({players.length}/{maxPlayers})
+        </h2>
+      </div>
 
-        return (
-          <div
-            key={player}
-            className={`flex items-center space-x-4 p-4 rounded-lg border-4 ${
-              isCurrentPlayer
-                ? 'border-primary bg-primary bg-opacity-20'
-                : 'border-accent-white border-opacity-30 bg-accent-white bg-opacity-5'
-            }`}
-          >
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg ${
-              isCurrentPlayer ? 'bg-primary text-accent-black' : 'bg-accent-white text-accent-black'
-            }`}>
-              {player.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <div className={`font-black text-lg ${isCurrentPlayer ? 'text-primary' : 'text-accent-white'}`}>
-                {player}
-                {isCurrentPlayer && (
-                  <span className="ml-2 text-sm">(YOU)</span>
-                )}
+      <div className="grid grid-cols-5 gap-6">
+        {allSlots.map((slot, index) => {
+          if (slot.type === 'player') {
+            const player = slot.player;
+            const isCurrentPlayer = player === currentPlayer;
+            const isHost = player === host;
+
+            return (
+              <div key={`player-${player}`} className="flex flex-col items-center">
+                {/* Player Circle */}
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center font-black text-3xl border-4 ${
+                  isCurrentPlayer
+                    ? 'bg-primary text-accent-white border-primary shadow-lg shadow-primary/50'
+                    : 'bg-accent-white text-accent-black border-accent-white'
+                }`}>
+                  {player.charAt(0).toUpperCase()}
+                </div>
+
+                {/* Player Name */}
+                <div className="mt-2 text-center">
+                  <div className={`font-bold text-sm ${isCurrentPlayer ? 'text-primary' : 'text-accent-white'}`}>
+                    {player}
+                  </div>
+                  {isHost && (
+                    <div className="inline-block mt-1 px-2 py-0.5 text-xs bg-primary text-accent-black font-black rounded uppercase">
+                      HOST
+                    </div>
+                  )}
+                </div>
               </div>
-              {isHost && (
-                <span className="inline-block mt-1 px-3 py-1 text-xs bg-gradient-intense text-accent-white font-black rounded uppercase">
-                  Host
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
+            );
+          }
 
-      {/* Empty slots */}
-      {Array.from({ length: emptySlots }).map((_, index) => (
-        <div
-          key={`empty-${index}`}
-          className="flex items-center space-x-4 p-4 rounded-lg border-4 border-dashed border-accent-white border-opacity-20 bg-accent-white bg-opacity-5"
-        >
-          <div className="w-12 h-12 rounded-full bg-accent-white bg-opacity-20 flex items-center justify-center">
-            <svg className="w-6 h-6 text-accent-white text-opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </div>
-          <div className="text-accent-white text-opacity-60 font-bold uppercase tracking-wide">
-            Waiting for player...
-          </div>
-        </div>
-      ))}
+          // Empty slot
+          return (
+            <div key={`empty-${index}`} className="flex flex-col items-center">
+              {/* Empty Circle */}
+              <div className="w-24 h-24 rounded-full flex items-center justify-center border-4 border-dashed border-primary border-opacity-30 bg-accent-white bg-opacity-5">
+                <Icon icon={Users} size={40} className="text-primary opacity-30" />
+              </div>
+
+              {/* Waiting Text */}
+              <div className="mt-2 text-center">
+                <div className="font-semibold text-sm text-primary opacity-50">
+                  Waiting...
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

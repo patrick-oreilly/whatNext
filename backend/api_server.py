@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
@@ -12,7 +13,7 @@ from google.genai.types import Part, Content
 from backend.core.models import (
     CreateRoomRequest, JoinRoomRequest, SubmitInputRequest,
     CastVoteRequest, RoomCreatedResponse, JoinRoomResponse,
-    HealthResponse, GamePhase
+    HealthResponse, GamePhase, LlmOutput
 )
 from backend.game_management.room_manager import RoomManager
 from backend.session_management.session_manager import SessionManager
@@ -312,6 +313,39 @@ async def trigger_input_timeout(room_id: str):
         logger.error(f"❌ ERROR in timeout endpoint: {e}", exc_info=True)
         raise
 
+@app.get("/api/voting/{room_id}/timer")
+async def get_voting_timer(room_id: str):
+    """
+    Get current voting phase timer status
+
+    Returns:
+    - time_remaining: Seconds remaining in voting phase
+    - has_timed_out: Whether phase has timed out
+    - total_inputs: Number of eligible inputs to vote on
+    - total_players: Total players in room
+    - timed_out_players: Players ineligible due to input timeout
+    """
+    room = room_manager.get_room(room_id)
+
+    if room.phase != GamePhase.VOTING:
+        return {
+            "active": False,
+            "message": "Voting phase not active"
+        }
+
+    time_remaining = room.get_voting_time_remaining(settings.VOTING_TIMER_SECONDS)
+    has_timed_out = room.is_voting_phase_timed_out(settings.VOTING_TIMER_SECONDS)
+
+    return {
+        "active": True,
+        "time_remaining": time_remaining,
+        "has_timed_out": has_timed_out,
+        "timeout_seconds": settings.VOTING_TIMER_SECONDS,
+        "total_inputs": len(room.player_inputs),
+        "total_players": len(room.players),
+        "timed_out_players": room.timed_out_players
+    }
+
 @app.delete("/api/rooms/{room_id}")
 async def delete_room(room_id: str):
     """Delete a room and close its session"""
@@ -385,14 +419,42 @@ async def cast_vote(request: CastVoteRequest):
 async def get_voting_results(room_id: str):
     """
     Calculate and return voting results
-    
-    Determines winner, updates scores
+
+    Determines winner, updates scores (with race condition protection)
     """
-    results = room_manager.calculate_winner(room_id)
-    
+    results = await room_manager.calculate_winner(room_id)
+
     logger.info(f"Voting results calculated for room {room_id}: winner is '{results.winning_player}'")
-    
+
     return results
+
+@app.post("/api/voting/{room_id}/timeout")
+async def trigger_voting_timeout(room_id: str):
+    """
+    Handle voting phase timeout
+
+    When voting timer expires, this calculates winner with current votes
+    and allows the game to proceed. Players who didn't vote get 0 points.
+    """
+    room = room_manager.get_room(room_id)
+
+    if room.phase != GamePhase.VOTING:
+        logger.warning(f"Voting timeout called but room {room_id} is in phase {room.phase}")
+        return {"status": "error", "message": f"Not in voting phase (current: {room.phase})"}
+
+    logger.info(f"⏰ Voting timeout triggered for room {room_id}, calculating winner with current votes")
+
+    # Calculate winner with whatever votes we have (using thread-safe method)
+    results = await room_manager.calculate_winner(room_id)
+
+    logger.info(f"✅ Voting timeout handled in room {room_id}, winner: {results.winning_player}")
+
+    return {
+        "status": "timeout_handled",
+        "room_id": room_id,
+        "winner": results.winning_player,
+        "votes_received": results.vote_counts
+    }
 
 @app.post("/api/turn/advance/{room_id}")
 async def advance_turn(room_id: str):
@@ -537,7 +599,7 @@ async def stream_story(room_id: str):
         """Generate Server-Sent Events from ADK"""
         try:
             full_response = ""
-            chunks = []
+            paragraph_chunks = []
 
             # Get the prepared prompt from room
             room = room_manager.get_room(room_id)
@@ -549,43 +611,91 @@ async def stream_story(room_id: str):
 
             message = room.next_prompt
 
-            # Stream response
+            # Collect complete response (ADK with output_schema returns JSON)
+            logger.info(f"Collecting structured response from ADK for room {room_id}")
+            json_objects = []
             async for chunk in session_manager.stream_response(room_id, message):
                 full_response += chunk
-                chunks.append(chunk)
+                logger.debug(f"Received chunk: {chunk[:100]}...")
 
-                # Send chunk to client in SSE format
+            logger.info(f"Complete response received (length={len(full_response)})")
+            logger.debug(f"Full response: {full_response}")
+
+            # Parse the JSON response into structured LlmOutput
+            # ADK may send JSON multiple times (partial + final), extract first valid object
+            try:
+                # Try to find first JSON object in response
+                # Look for pattern: { ... }
+                import re
+                json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                matches = re.findall(json_pattern, full_response, re.DOTALL)
+
+                if matches:
+                    # Use first valid JSON object
+                    first_json = matches[0]
+                    logger.debug(f"Extracted first JSON object: {first_json[:200]}...")
+                    story_data = json.loads(first_json)
+                    llm_output = LlmOutput(**story_data)
+                    logger.info(f"Successfully parsed structured output: has_story_ended={llm_output.has_story_ended}")
+                else:
+                    raise ValueError("No JSON object found in response")
+
+            except (json.JSONDecodeError, ValueError, Exception) as e:
+                logger.error(f"Failed to parse structured output: {e}")
+                logger.error(f"Raw response: {full_response}")
+                # Fallback: create a basic output with the raw text as paragraph
+                llm_output = LlmOutput(
+                    paragraph=full_response,
+                    status="Error parsing response",
+                    decision="Continue?",
+                    has_story_ended=False
+                )
+
+            # Stream the paragraph text with typing effect
+            paragraph_text = llm_output.paragraph
+            chunk_size = 15  # Characters per chunk for smooth streaming
+
+            for i in range(0, len(paragraph_text), chunk_size):
+                chunk = paragraph_text[i:i + chunk_size]
+                paragraph_chunks.append(chunk)
                 yield f"data: {chunk}\n\n"
+                await asyncio.sleep(0.02)  # Slight delay for typing effect
 
-                # Small delay for smooth streaming
-                await asyncio.sleep(0.01)
-            
             # Store cached chunks for late joiners
             async with active_streams_lock:
                 if stream_key in active_streams:
-                    active_streams[stream_key]["response"] = chunks
+                    active_streams[stream_key]["response"] = paragraph_chunks
 
             # Clear the prompt after use
             room = room_manager.get_room(room_id)
             room.next_prompt = None
             room_manager.storage.save_room(room)
 
-            # Store complete story segment
+            # Store complete story segment with structured content
             room_manager.add_story_segment(
                 room_id=room_id,
-                content=full_response,
+                content=llm_output,
                 winning_player=None
             )
-            
-            # Update room phase
+
+            # Check if story has ended based on structured flag
             room = room_manager.get_room(room_id)
-            
-            if room.turn == 1:
-                # After opening, move to player input
-                room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+
+            if llm_output.has_story_ended:
+                logger.info(f"🏁 Story has ended flag set for room {room_id}")
+                logger.info(f"Setting story_has_ended flag, staying in GENERATING_STORY phase for user to read")
+                room.story_has_ended = True
+                room_manager.storage.save_room(room)
+                # Stay in GENERATING_STORY phase so user can read the final story
+                # When they click "Continue", we'll transition to GAME_OVER
             else:
-                # After continuation, move to player input for next turn
-                room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+                # Story continues - move to player input
+                if room.turn == 1:
+                    # After opening, move to player input
+                    room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+                else:
+                    # After continuation, move to player input for next turn
+                    room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
             
             # Signal completion
             yield "data: [DONE]\n\n"
@@ -614,6 +724,32 @@ async def stream_story(room_id: str):
             "X-Accel-Buffering": "no",
         }
     )
+
+@app.post("/api/game/end/{room_id}")
+async def end_game(room_id: str):
+    """
+    End the game (called when story has [END] flag and user clicks Continue)
+
+    Sets phase to GAME_OVER and closes ADK session
+    """
+    room = room_manager.get_room(room_id)
+
+    logger.info(f"🏁 Ending game for room {room_id} (story_has_ended flag was set)")
+
+    # Set phase to GAME_OVER
+    room.phase = GamePhase.GAME_OVER
+    room_manager.storage.save_room(room)
+
+    # Close ADK session
+    session_manager.close_session(room_id)
+
+    logger.info(f"Game ended in room {room_id}")
+
+    return {
+        "status": "game_ended",
+        "room_id": room_id,
+        "final_scores": room.scores
+    }
 
 # UTILITY ENDPOINTS
 

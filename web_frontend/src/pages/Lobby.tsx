@@ -10,6 +10,8 @@ import { useGameStore } from '../store/gameStore';
 import { GamePhase } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
 import { usePolling } from '../hooks';
+import { Icon } from '../components/common/Icon';
+import { AlertTriangle } from 'lucide-react';
 
 export const Lobby: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -78,7 +80,7 @@ export const Lobby: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-md mx-auto text-center bg-accent-black border-4 border-accent-white">
-          <div className="text-primary text-6xl mb-4">⚠️</div>
+          <Icon icon={AlertTriangle} strokeWidth={1} size={72} className="mx-auto mb-4 text-primary" />
           <h2 className="font-display text-3xl font-black text-accent-white uppercase mb-4">Error</h2>
           <p className="text-accent-white font-bold mb-6">{error}</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
@@ -96,7 +98,7 @@ export const Lobby: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <Card className="bg-accent-black border-4 border-accent-white">
           <h1 className="font-display text-4xl font-black text-accent-white mb-8 uppercase tracking-tight text-center">Game Lobby</h1>
 
@@ -109,6 +111,15 @@ export const Lobby: React.FC = () => {
           <RoomCode code={roomId} />
 
           <PlayerList players={roomState.players} host={roomState.players[0]} currentPlayer={currentPlayer} />
+
+          {/* Waiting message */}
+          {!canStartGame && (
+            <div className="mb-6 p-4 bg-primary bg-opacity-10 border-2 border-primary rounded-lg">
+              <p className="text-accent-white font-bold text-center">
+                Waiting for at least one more player to join...
+              </p>
+            </div>
+          )}
 
           <div className="mt-8 text-center">
             {isHost ? (

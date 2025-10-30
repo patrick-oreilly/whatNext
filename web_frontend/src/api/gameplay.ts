@@ -51,6 +51,19 @@ export const gameplayApi = {
   },
 
   /**
+   * Trigger voting phase timeout
+   */
+  triggerVotingTimeout: async (roomId: string): Promise<{
+    status: string;
+    room_id: string;
+    winner: string;
+    votes_received: Record<string, number>;
+  }> => {
+    const response = await apiClient.post(`/api/voting/${roomId}/timeout`);
+    return response.data;
+  },
+
+  /**
    * Get timer status
    */
   getTimerStatus: async (roomId: string): Promise<{
@@ -62,6 +75,18 @@ export const gameplayApi = {
     timed_out_players?: string[];
   }> => {
     const response = await apiClient.get(`/api/rooms/${roomId}/timer`);
+    return response.data;
+  },
+
+  /**
+   * End the game (when story has [END] flag)
+   */
+  endGame: async (roomId: string): Promise<{
+    status: string;
+    room_id: string;
+    final_scores: Record<string, number>;
+  }> => {
+    const response = await apiClient.post(`/api/game/end/${roomId}`);
     return response.data;
   },
 };

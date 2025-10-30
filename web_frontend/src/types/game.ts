@@ -49,7 +49,13 @@ export interface PlayerInput {
 
 export interface StorySegment {
   turn: number;
-  content: string;
+  content: {
+    paragraph: string;
+    status: string | null;
+    decision: string | null;
+    has_story_ended: boolean;
+    ending_summary?: string | null;
+  };
   winning_player: string | null;
   timestamp: string;
 }
@@ -66,4 +72,5 @@ export interface RoomState {
   max_turns: number;
   input_phase_start_time?: string | null;
   timed_out_players?: string[];
+  story_has_ended?: boolean;
 }

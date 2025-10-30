@@ -3,6 +3,28 @@ from typing import List, Dict, Optional
 from datetime import datetime
 from enum import Enum
 
+
+class LlmOutput(BaseModel):
+    paragraph: str = Field(
+        description="A vivid, narrative paragraph describing the play (1-3 sentences)."
+    )
+    status: Optional[str] = Field(
+        default=None,
+        description="Current game status update (e.g., 'Momentum swinging', 'Lead extended', 'Timeout called'). Null if story has ended."
+    )
+    decision: Optional[str] = Field(
+        default=None,
+        description="The player's next decision prompt (e.g., 'Press full-court or drop back?'). Null if story has ended."
+    )
+    has_story_ended: bool = Field(
+        default=False,
+        description="True if the game has ended."
+    )
+    ending_summary: Optional[str] = Field(
+        default=None,
+        description="A summary of the story's ending. Only provided when has_story_ended is True."
+    )
+
 # ENUM data models
 
 class GamePhase(str, Enum):
@@ -12,6 +34,7 @@ class GamePhase(str, Enum):
     PLAYER_INPUT = "player_input"
     VOTING = "voting"
     GAME_OVER = "game_over"
+
 
 
 class StoryLineType(str, Enum):
@@ -39,7 +62,7 @@ class PlayerInput(BaseModel):
 class StorySegment(BaseModel):
     """A segment of the story"""
     turn: int
-    content: str
+    content: LlmOutput
     winning_player: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
 
@@ -60,6 +83,9 @@ class GameRoom(BaseModel):
     input_phase_start_time: Optional[datetime] = None  # Track when input phase started
     timed_out_players: List[str] = []  # Track players who timed out
     next_prompt: Optional[str] = None  # Prompt for next AI generation
+    story_has_ended: bool = False  # Flag indicating AI generated [END] marker
+    points_awarded_turn: Optional[int] = None  # NEW: Track which turn had points awarded
+    voting_phase_start_time: Optional[datetime] = None  # Track when voting phase started
 
     class Config:
         use_enum_values = True
@@ -83,7 +109,7 @@ class GameRoom(BaseModel):
 
     def should_end_game(self) -> bool:
         """Check if the game should end"""
-        return self.turn >= self.max_turns
+        return self.turn > self.max_turns
 
     def is_input_phase_timed_out(self, timeout_seconds: int) -> bool:
         """Check if input phase has exceeded timeout"""
@@ -97,6 +123,21 @@ class GameRoom(BaseModel):
         if not self.input_phase_start_time:
             return timeout_seconds
         elapsed = (datetime.now() - self.input_phase_start_time).total_seconds()
+        remaining = timeout_seconds - elapsed
+        return max(0, remaining)
+
+    def is_voting_phase_timed_out(self, timeout_seconds: int) -> bool:
+        """Check if voting phase has exceeded timeout"""
+        if not self.voting_phase_start_time:
+            return False
+        elapsed = (datetime.now() - self.voting_phase_start_time).total_seconds()
+        return elapsed >= timeout_seconds
+
+    def get_voting_time_remaining(self, timeout_seconds: int) -> float:
+        """Get remaining time in voting phase (seconds)"""
+        if not self.voting_phase_start_time:
+            return timeout_seconds
+        elapsed = (datetime.now() - self.voting_phase_start_time).total_seconds()
         remaining = timeout_seconds - elapsed
         return max(0, remaining)
     
@@ -148,7 +189,10 @@ class RoomStateResponse(BaseModel):
     player_inputs: List[PlayerInput]
     max_turns: int
     input_phase_start_time: Optional[datetime] = None
+    voting_phase_start_time: Optional[datetime] = None
     timed_out_players: List[str] = []
+    story_has_ended: bool = False
+    voting_timeout_seconds: Optional[int] = None
 
     class Config:
         use_enum_values = True  
@@ -167,6 +211,8 @@ class VotingResultsResponse(BaseModel):
     winning_player: str
     winning_input: str
     vote_counts: Dict[str, int]
+    was_tie: bool = False  # NEW: Was there a tie?
+    tied_players: List[str] = []  # NEW: Which players tied?
 
 class ErrorResponse(BaseModel):
     """Error response"""
