@@ -109,7 +109,7 @@ class GameRoom(BaseModel):
 
     def should_end_game(self) -> bool:
         """Check if the game should end"""
-        return self.turn >= self.max_turns
+        return self.turn > self.max_turns
 
     def is_input_phase_timed_out(self, timeout_seconds: int) -> bool:
         """Check if input phase has exceeded timeout"""
