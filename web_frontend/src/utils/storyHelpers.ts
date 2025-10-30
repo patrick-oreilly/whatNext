@@ -29,9 +29,9 @@ export const extractDecisionPrompt = (text: string): string | null => {
 };
 
 /**
- * Remove decision and status sections from story text for display
+ * Remove decision, status, and end sections from story text for display
  * Removes everything from [DECISION] marker onwards, including the decision sentence
- * Also removes Status: section if present
+ * Also removes Status: section and [END] section if present
  * Preserves paragraph breaks (double newlines)
  * @param text - Full AI story text
  * @returns Clean text with only the main story content
@@ -41,7 +41,12 @@ export const cleanStoryText = (text: string): string => {
 
   let cleaned = text;
 
-  // First, try to remove everything from [DECISION] marker onwards
+  // First, remove everything from [END] marker onwards if present (case insensitive)
+  if (/\[END\]/i.test(cleaned)) {
+    cleaned = cleaned.replace(/\[END\]\s*:?\s*.*$/is, '');
+  }
+
+  // Then, try to remove everything from [DECISION] marker onwards
   if (/\[(DECISION|DESCISON)\]/i.test(cleaned)) {
     cleaned = cleaned.replace(/\[(DECISION|DESCISON)\].*$/is, '');
   } else {
@@ -58,8 +63,8 @@ export const cleanStoryText = (text: string): string => {
   }
 
   // Also handle case where Status comes before or without Decision
-  // Remove everything from Status: onwards
-  cleaned = cleaned.replace(/\bStatus:\s*.*/is, '');
+  // Remove everything from Status: or **Status**: onwards
+  cleaned = cleaned.replace(/\*?\*?Status\*?\*?\s*:?\s*.*/is, '');
 
   // Clean up trailing whitespace
   cleaned = cleaned.trim();
@@ -73,7 +78,7 @@ export const cleanStoryText = (text: string): string => {
 
 /**
  * Extract status information from AI story text
- * Looks for text after "Status:" marker
+ * Looks for text after "Status" marker (with or without colon, with or without markdown bold)
  * Status appears optionally after the decision in AI responses
  * @param text - Full AI story segment
  * @returns The status text or null if not found
@@ -81,12 +86,23 @@ export const cleanStoryText = (text: string): string => {
 export const extractStatus = (text: string): string | null => {
   if (!text) return null;
 
-  // Match text after "Status:" marker
-  // Could appear after [DECISION] or standalone
-  const match = text.match(/\bStatus:\s*(.+?)(?:\n|$)/is);
+  // Try multiple patterns to match different AI output formats:
+  // 1. **Status**: text
+  // 2. **Status** text (no colon)
+  // 3. Status: text (no markdown)
+  // 4. Status text (no markdown, no colon)
 
-  if (match && match[1] && match[1].trim()) {
-    return match[1].trim();
+  const patterns = [
+    /\*\*Status\*\*\s*:?\s*(.+?)(?:\n|$)/is,  // **Status**: or **Status**
+    /\bStatus\s*:\s*(.+?)(?:\n|$)/is,         // Status:
+    /\bStatus\s+([^\n]+?)(?:\n|$)/is,         // Status (followed by space, no colon)
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && match[1].trim()) {
+      return match[1].trim();
+    }
   }
 
   return null;
@@ -112,4 +128,42 @@ export const formatStatus = (status: string): string => {
 export const hasDecisionMarker = (text: string): boolean => {
   if (!text) return false;
   return /\[(DECISION|DESCISON)\]/i.test(text);
+};
+
+/**
+ * Check if a story segment contains an END marker
+ * @param text - Story text to check
+ * @returns True if text contains end marker
+ */
+export const hasEndMarker = (text: string): boolean => {
+  if (!text) return false;
+  return /\[END\]/i.test(text);
+};
+
+/**
+ * Extract ending summary from AI story text
+ * Looks for text after [END]: marker
+ * @param text - Full AI story segment
+ * @returns The ending summary text or null if not found
+ */
+export const extractEndSummary = (text: string): string | null => {
+  if (!text) return null;
+
+  // Match text after "[END]:" or "[END]" marker (case insensitive)
+  // Captures everything after the marker until end of string
+  const match = text.match(/\[END\]\s*:?\s*(.*)$/is);
+
+  if (match && match[1]) {
+    const summary = match[1].trim();
+
+    // Remove any Status: section that might follow
+    const cleanedSummary = summary.replace(/\*?\*?Status\*?\*?\s*:?.*/is, '').trim();
+
+    // Remove any Decision markers that might follow
+    const finalSummary = cleanedSummary.replace(/\[(DECISION|DESCISON)\].*/is, '').trim();
+
+    return finalSummary || null;
+  }
+
+  return null;
 };

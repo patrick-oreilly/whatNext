@@ -312,6 +312,39 @@ async def trigger_input_timeout(room_id: str):
         logger.error(f"❌ ERROR in timeout endpoint: {e}", exc_info=True)
         raise
 
+@app.get("/api/voting/{room_id}/timer")
+async def get_voting_timer(room_id: str):
+    """
+    Get current voting phase timer status
+
+    Returns:
+    - time_remaining: Seconds remaining in voting phase
+    - has_timed_out: Whether phase has timed out
+    - total_inputs: Number of eligible inputs to vote on
+    - total_players: Total players in room
+    - timed_out_players: Players ineligible due to input timeout
+    """
+    room = room_manager.get_room(room_id)
+
+    if room.phase != GamePhase.VOTING:
+        return {
+            "active": False,
+            "message": "Voting phase not active"
+        }
+
+    time_remaining = room.get_voting_time_remaining(settings.VOTING_TIMER_SECONDS)
+    has_timed_out = room.is_voting_phase_timed_out(settings.VOTING_TIMER_SECONDS)
+
+    return {
+        "active": True,
+        "time_remaining": time_remaining,
+        "has_timed_out": has_timed_out,
+        "timeout_seconds": settings.VOTING_TIMER_SECONDS,
+        "total_inputs": len(room.player_inputs),
+        "total_players": len(room.players),
+        "timed_out_players": room.timed_out_players
+    }
+
 @app.delete("/api/rooms/{room_id}")
 async def delete_room(room_id: str):
     """Delete a room and close its session"""
@@ -385,14 +418,42 @@ async def cast_vote(request: CastVoteRequest):
 async def get_voting_results(room_id: str):
     """
     Calculate and return voting results
-    
-    Determines winner, updates scores
+
+    Determines winner, updates scores (with race condition protection)
     """
-    results = room_manager.calculate_winner(room_id)
-    
+    results = await room_manager.calculate_winner(room_id)
+
     logger.info(f"Voting results calculated for room {room_id}: winner is '{results.winning_player}'")
-    
+
     return results
+
+@app.post("/api/voting/{room_id}/timeout")
+async def trigger_voting_timeout(room_id: str):
+    """
+    Handle voting phase timeout
+
+    When voting timer expires, this calculates winner with current votes
+    and allows the game to proceed. Players who didn't vote get 0 points.
+    """
+    room = room_manager.get_room(room_id)
+
+    if room.phase != GamePhase.VOTING:
+        logger.warning(f"Voting timeout called but room {room_id} is in phase {room.phase}")
+        return {"status": "error", "message": f"Not in voting phase (current: {room.phase})"}
+
+    logger.info(f"⏰ Voting timeout triggered for room {room_id}, calculating winner with current votes")
+
+    # Calculate winner with whatever votes we have (using thread-safe method)
+    results = await room_manager.calculate_winner(room_id)
+
+    logger.info(f"✅ Voting timeout handled in room {room_id}, winner: {results.winning_player}")
+
+    return {
+        "status": "timeout_handled",
+        "room_id": room_id,
+        "winner": results.winning_player,
+        "votes_received": results.vote_counts
+    }
 
 @app.post("/api/turn/advance/{room_id}")
 async def advance_turn(room_id: str):
@@ -576,16 +637,26 @@ async def stream_story(room_id: str):
                 content=full_response,
                 winning_player=None
             )
-            
-            # Update room phase
+
+            # Check if story contains [END] marker
+            # Don't immediately end game - let user see the final story first
             room = room_manager.get_room(room_id)
-            
-            if room.turn == 1:
-                # After opening, move to player input
-                room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+
+            if "[END]" in full_response or "[end]" in full_response.lower():
+                logger.info(f"🏁 [END] flag detected in story for room {room_id}")
+                logger.info(f"Setting story_has_ended flag, staying in GENERATING_STORY phase for user to read")
+                room.story_has_ended = True
+                room_manager.storage.save_room(room)
+                # Stay in GENERATING_STORY phase so user can read the final story
+                # When they click "Continue", we'll transition to GAME_OVER
             else:
-                # After continuation, move to player input for next turn
-                room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+                # No [END] marker - continue game normally
+                if room.turn == 1:
+                    # After opening, move to player input
+                    room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
+                else:
+                    # After continuation, move to player input for next turn
+                    room_manager.set_phase(room_id, GamePhase.PLAYER_INPUT)
             
             # Signal completion
             yield "data: [DONE]\n\n"
@@ -614,6 +685,32 @@ async def stream_story(room_id: str):
             "X-Accel-Buffering": "no",
         }
     )
+
+@app.post("/api/game/end/{room_id}")
+async def end_game(room_id: str):
+    """
+    End the game (called when story has [END] flag and user clicks Continue)
+
+    Sets phase to GAME_OVER and closes ADK session
+    """
+    room = room_manager.get_room(room_id)
+
+    logger.info(f"🏁 Ending game for room {room_id} (story_has_ended flag was set)")
+
+    # Set phase to GAME_OVER
+    room.phase = GamePhase.GAME_OVER
+    room_manager.storage.save_room(room)
+
+    # Close ADK session
+    session_manager.close_session(room_id)
+
+    logger.info(f"Game ended in room {room_id}")
+
+    return {
+        "status": "game_ended",
+        "room_id": room_id,
+        "final_scores": room.scores
+    }
 
 # UTILITY ENDPOINTS
 

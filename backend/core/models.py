@@ -60,6 +60,9 @@ class GameRoom(BaseModel):
     input_phase_start_time: Optional[datetime] = None  # Track when input phase started
     timed_out_players: List[str] = []  # Track players who timed out
     next_prompt: Optional[str] = None  # Prompt for next AI generation
+    story_has_ended: bool = False  # Flag indicating AI generated [END] marker
+    points_awarded_turn: Optional[int] = None  # NEW: Track which turn had points awarded
+    voting_phase_start_time: Optional[datetime] = None  # Track when voting phase started
 
     class Config:
         use_enum_values = True
@@ -97,6 +100,21 @@ class GameRoom(BaseModel):
         if not self.input_phase_start_time:
             return timeout_seconds
         elapsed = (datetime.now() - self.input_phase_start_time).total_seconds()
+        remaining = timeout_seconds - elapsed
+        return max(0, remaining)
+
+    def is_voting_phase_timed_out(self, timeout_seconds: int) -> bool:
+        """Check if voting phase has exceeded timeout"""
+        if not self.voting_phase_start_time:
+            return False
+        elapsed = (datetime.now() - self.voting_phase_start_time).total_seconds()
+        return elapsed >= timeout_seconds
+
+    def get_voting_time_remaining(self, timeout_seconds: int) -> float:
+        """Get remaining time in voting phase (seconds)"""
+        if not self.voting_phase_start_time:
+            return timeout_seconds
+        elapsed = (datetime.now() - self.voting_phase_start_time).total_seconds()
         remaining = timeout_seconds - elapsed
         return max(0, remaining)
     
@@ -148,7 +166,10 @@ class RoomStateResponse(BaseModel):
     player_inputs: List[PlayerInput]
     max_turns: int
     input_phase_start_time: Optional[datetime] = None
+    voting_phase_start_time: Optional[datetime] = None
     timed_out_players: List[str] = []
+    story_has_ended: bool = False
+    voting_timeout_seconds: Optional[int] = None
 
     class Config:
         use_enum_values = True  
@@ -167,6 +188,8 @@ class VotingResultsResponse(BaseModel):
     winning_player: str
     winning_input: str
     vote_counts: Dict[str, int]
+    was_tie: bool = False  # NEW: Was there a tie?
+    tied_players: List[str] = []  # NEW: Which players tied?
 
 class ErrorResponse(BaseModel):
     """Error response"""

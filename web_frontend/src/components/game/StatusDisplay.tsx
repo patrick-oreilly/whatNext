@@ -1,6 +1,7 @@
 // Status display component for AI-generated status information
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { formatStatus } from '../../utils/storyHelpers';
 
 interface StatusDisplayProps {
@@ -20,9 +21,17 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({ status }) => {
         <span className="text-xs text-accent-white text-opacity-60 uppercase tracking-wider font-bold">
           Status:
         </span>
-        <span className="text-sm text-accent-white text-opacity-80 font-semibold">
-          {formatStatus(status)}
-        </span>
+        <div className="text-sm text-accent-white text-opacity-80 font-semibold prose prose-invert prose-sm max-w-none">
+          <ReactMarkdown
+            components={{
+              p: ({ ...props }) => <span className="text-sm text-accent-white text-opacity-80 font-semibold" {...props} />,
+              strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
+              em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
+            }}
+          >
+            {formatStatus(status)}
+          </ReactMarkdown>
+        </div>
       </div>
     </div>
   );

@@ -66,4 +66,5 @@ export interface RoomState {
   max_turns: number;
   input_phase_start_time?: string | null;
   timed_out_players?: string[];
+  story_has_ended?: boolean;
 }
