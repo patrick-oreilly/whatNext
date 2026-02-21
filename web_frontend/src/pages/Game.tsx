@@ -495,7 +495,7 @@ export const Game: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-display text-3xl font-black text-accent-white uppercase tracking-tight">
-                What's Next
+                What Next?
               </h1>
               <p className="text-primary font-bold text-lg mt-1">
                 Turn {roomState.turn} of {roomState.max_turns}

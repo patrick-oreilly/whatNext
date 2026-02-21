@@ -468,6 +468,21 @@ async def advance_turn(room_id: str):
     """
     room = room_manager.get_room(room_id)
 
+    # Check if story has already ended - if so, go to GAME_OVER instead
+    if room.story_has_ended:
+        logger.info(f"🏁 Story already ended in room {room_id}, transitioning to GAME_OVER")
+        room.phase = GamePhase.GAME_OVER
+        room_manager.storage.save_room(room)
+
+        # Close ADK session
+        session_manager.close_session(room_id)
+
+        return {
+            "status": "game_over",
+            "turn": room.turn,
+            "final_scores": room.scores
+        }
+
     # Determine if we have inputs and get winning input
     winning_input = None
     if len(room.player_inputs) > 0:

@@ -9,6 +9,7 @@ import { useLocalStorage } from '../hooks';
 import { STORAGE_KEYS } from '../utils/constants';
 import { validatePlayerName, validateRoomCode } from '../utils/validation';
 import { formatRoomCode } from '../utils/formatters';
+import {extractErrorMessage} from '../utils/errorMessageExtraction';
 
 export const JoinRoom: React.FC = () => {
   const navigate = useNavigate();
@@ -54,9 +55,7 @@ export const JoinRoom: React.FC = () => {
       // Navigate to lobby
       navigate(`/lobby/${formattedCode}`);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Failed to join room';
+      const errorMessage = extractErrorMessage(error);
   
       if (errorMessage.includes('already taken')) {
         setErrors({ playerName: errorMessage });

@@ -18,10 +18,16 @@ export const Home: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="container mx-auto px-4 py-12">
+          <div className="min-h-screen bg-gradient-to-br from-[#FF470D] via-[#FF6B35] to-[#FF8B55] relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-[#FF8B55] rounded-full mix-blend-overlay filter blur-3xl opacity-30 animate-pulse"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse delay-700"></div>
+        <div className="absolute -bottom-32 left-1/3 w-[500px] h-[500px] bg-[#FF470D] rounded-full mix-blend-overlay filter blur-3xl opacity-40 animate-pulse delay-1000"></div>
+      </div>
       {/* Hero Section */}
       <div className="text-center mb-12 mt-6 animate-fade-in">
-        <h1 className="font-display text-6xl md:text-8xl font-black text-accent-white mb-6 uppercase tracking-wide text-glow leading-none">
+        <h1 className="font-display text-6xl md:text-8xl font-black text-accent-white mb-6 uppercase tracking-wide text-glow leading-none mt-8">
           <span className="inline-grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-x-4 gap-y-2">
             <span className="row-start-1 col-start-1 ">What</span>
             <span className="row-start-2 col-start-1 ">Next</span>

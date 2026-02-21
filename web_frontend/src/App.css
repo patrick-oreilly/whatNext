@@ -1,3 +1,33 @@
+/* --- START: Custom Fonts and Root Variables --- */
+
+/* Loads Bowlby One SC and Inter from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Bowlby+One+SC&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-primary: #FF470D;
+  --color-secondary: #1B1B1D;
+  --color-neutral: #FDFDFD;
+  --color-accent-sky: #00C8FF;
+  --color-accent-lemon: #FFE600;
+}
+
+/* Defines the font used by the Tailwind class 'font-title' */
+.font-title {
+  font-family: 'Bowlby One SC', cursive;
+}
+
+/* Sets Inter as the default font for the entire application */
+* {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Explicitly target standard headings for the title font */
+h1, h2, h3, .title {
+  font-family: 'Bowlby One SC', cursive;
+}
+
+/* --- END: Custom Fonts and Root Variables --- */
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
