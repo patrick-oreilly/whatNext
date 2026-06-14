@@ -263,6 +263,21 @@ class TestSubmitAndVote:
         result = game_turn.cast_vote(populated_room, "Alice", "Bob")
         assert result.response["status"] == "voted"
 
+    def test_cast_vote_outside_voting_phase_raises(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.PLAYER_INPUT
+        room_manager.save_room(room)
+
+        game_turn.submit_input(populated_room, "Alice", "Shoot the three!")
+        game_turn.submit_input(populated_room, "Bob", "Pass it inside!")
+
+        room.phase = GamePhase.GENERATING_STORY
+        room_manager.save_room(room)
+
+        with pytest.raises(InvalidGamePhaseError):
+            game_turn.cast_vote(populated_room, "Alice", "Bob")
+
 
 # ------------------------------------------------------------------
 # GameTurn: LLM parsing
@@ -450,6 +465,45 @@ class TestVoting:
         assert result.success is True
         assert "winning_player" in result.response
         assert "vote_counts" in result.response
+
+    @pytest.mark.asyncio
+    async def test_resolve_voting(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=2, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=0, voters=[]),
+        ]
+        room_manager.save_room(room)
+
+        result = await game_turn.resolve_voting(populated_room)
+        assert result.success is True
+        assert "winning_player" in result.response
+        assert "vote_counts" in result.response
+
+    @pytest.mark.asyncio
+    async def test_tie_breaking_produces_winner(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.turn = 1
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=1, voters=["Alice"]),
+            PlayerInput(player_name="Bob", text="B", votes=1, voters=["Bob"]),
+        ]
+        room_manager.save_room(room)
+
+        import random as test_random
+        test_random.seed(42)
+        import backend.game_management.game_turn as gt_module
+        gt_module.random.seed(42)
+
+        result = await game_turn.resolve_voting(populated_room)
+        assert result.success is True
+        assert result.response["was_tie"] is True
+        assert result.response["winning_player"] in ["Alice", "Bob"]
+        assert len(result.response["tied_players"]) == 2
 
     @pytest.mark.asyncio
     async def test_handle_voting_timeout(self, game_turn, room_manager, populated_room):

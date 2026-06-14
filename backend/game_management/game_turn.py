@@ -203,52 +203,57 @@ class GameTurn:
         )
 
     # ------------------------------------------------------------------
-    # calculate_winner / voting results
+    # resolve_voting / voting results
     # ------------------------------------------------------------------
 
-    async def get_voting_results(self, room_id: str) -> TurnResult:
+    def _resolve_voting_locked(self, room: GameRoom, room_id: str) -> TurnResult:
+        if not room.player_inputs:
+            raise VotingError("No player inputs to vote on")
+
+        max_votes = max(inp.votes for inp in room.player_inputs)
+        tied_inputs = [inp for inp in room.player_inputs if inp.votes == max_votes]
+        winning_input = random.choice(tied_inputs)
+        was_tie = len(tied_inputs) > 1
+        tied_player_names = [inp.player_name for inp in tied_inputs]
+
+        vote_counts = {inp.player_name: inp.votes for inp in room.player_inputs}
+
+        if room.points_awarded_turn is None or room.points_awarded_turn != room.turn:
+            for inp in room.player_inputs:
+                points_earned = inp.votes * 15
+                if inp.player_name not in room.scores:
+                    room.scores[inp.player_name] = 0
+                room.scores[inp.player_name] += points_earned
+            room.points_awarded_turn = room.turn
+
+        room.update_activity()
+        self._save_room(room)
+
+        results = VotingResultsResponse(
+            room_id=room_id,
+            winning_player=winning_input.player_name,
+            winning_input=winning_input.text,
+            vote_counts=vote_counts,
+            was_tie=was_tie,
+            tied_players=tied_player_names
+        )
+
+        logger.info(f"Voting winner in room {room_id}: '{winning_input.player_name}' with {winning_input.votes} votes")
+
+        return TurnResult(
+            success=True,
+            response=results.model_dump(),
+            phase=room.phase
+        )
+
+    async def resolve_voting(self, room_id: str) -> TurnResult:
         lock = await self.room_manager.get_room_lock(room_id)
         async with lock:
             room = self._get_room(room_id)
+            return self._resolve_voting_locked(room, room_id)
 
-            if not room.player_inputs:
-                raise VotingError("No player inputs to vote on")
-
-            max_votes = max(inp.votes for inp in room.player_inputs)
-            tied_inputs = [inp for inp in room.player_inputs if inp.votes == max_votes]
-            winning_input = random.choice(tied_inputs)
-            was_tie = len(tied_inputs) > 1
-            tied_player_names = [inp.player_name for inp in tied_inputs]
-
-            vote_counts = {inp.player_name: inp.votes for inp in room.player_inputs}
-
-            if room.points_awarded_turn is None or room.points_awarded_turn != room.turn:
-                for inp in room.player_inputs:
-                    points_earned = inp.votes * 15
-                    if inp.player_name not in room.scores:
-                        room.scores[inp.player_name] = 0
-                    room.scores[inp.player_name] += points_earned
-                room.points_awarded_turn = room.turn
-
-            room.update_activity()
-            self._save_room(room)
-
-            results = VotingResultsResponse(
-                room_id=room_id,
-                winning_player=winning_input.player_name,
-                winning_input=winning_input.text,
-                vote_counts=vote_counts,
-                was_tie=was_tie,
-                tied_players=tied_player_names
-            )
-
-            logger.info(f"Voting winner in room {room_id}: '{winning_input.player_name}' with {winning_input.votes} votes")
-
-            return TurnResult(
-                success=True,
-                response=results.model_dump(),
-                phase=room.phase
-            )
+    async def get_voting_results(self, room_id: str) -> TurnResult:
+        return await self.resolve_voting(room_id)
 
     # ------------------------------------------------------------------
     # handle_input_timeout
@@ -375,48 +380,21 @@ class GameTurn:
             room = self._get_room(room_id)
             self._validate_phase(room, GamePhase.VOTING, "handle voting timeout")
 
-            if not room.player_inputs:
-                raise VotingError("No player inputs to vote on")
+            result = self._resolve_voting_locked(room, room_id)
+            winner = result.response.get("winning_player")
+            vote_counts = result.response.get("vote_counts")
 
-            max_votes = max(inp.votes for inp in room.player_inputs)
-            tied_inputs = [inp for inp in room.player_inputs if inp.votes == max_votes]
-            winning_input = random.choice(tied_inputs)
-            was_tie = len(tied_inputs) > 1
-            tied_player_names = [inp.player_name for inp in tied_inputs]
-
-            vote_counts = {inp.player_name: inp.votes for inp in room.player_inputs}
-
-            if room.points_awarded_turn is None or room.points_awarded_turn != room.turn:
-                for inp in room.player_inputs:
-                    points_earned = inp.votes * 15
-                    if inp.player_name not in room.scores:
-                        room.scores[inp.player_name] = 0
-                    room.scores[inp.player_name] += points_earned
-                room.points_awarded_turn = room.turn
-
-            room.update_activity()
-            self._save_room(room)
-
-            results = VotingResultsResponse(
-                room_id=room_id,
-                winning_player=winning_input.player_name,
-                winning_input=winning_input.text,
-                vote_counts=vote_counts,
-                was_tie=was_tie,
-                tied_players=tied_player_names
-            )
-
-            logger.info(f"Voting timeout handled in room {room_id}, winner: {results.winning_player}")
+            logger.info(f"Voting timeout handled in room {room_id}, winner: {winner}")
 
             return TurnResult(
                 success=True,
                 response={
                     "status": "timeout_handled",
                     "room_id": room_id,
-                    "winner": results.winning_player,
-                    "votes_received": results.vote_counts
+                    "winner": winner,
+                    "votes_received": vote_counts
                 },
-                phase=room.phase
+                phase=result.phase
             )
 
     # ------------------------------------------------------------------
