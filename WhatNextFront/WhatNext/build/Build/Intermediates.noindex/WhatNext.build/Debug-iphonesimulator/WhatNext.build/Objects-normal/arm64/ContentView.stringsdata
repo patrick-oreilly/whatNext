@@ -1,0 +1,48 @@
+{
+  "source": "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "?",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "WHAT",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "NEXT",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "START GAME",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "FIND GAME",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 60
+        }
+      }
+    ]
+  },
+  "version": 1
+}

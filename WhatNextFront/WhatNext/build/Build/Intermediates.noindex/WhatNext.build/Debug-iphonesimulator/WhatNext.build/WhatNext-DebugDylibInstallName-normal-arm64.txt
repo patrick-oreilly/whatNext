@@ -1,0 +1,1 @@
+@rpath/WhatNext.debug.dylib

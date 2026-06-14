@@ -1,0 +1,48 @@
+{
+  "source": "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/GamePage/VoteScreen.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Waiting for others to finish voting...",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "?",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "WHAT",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 29
+        }
+      },
+      {
+        "comment": "",
+        "key": "NEXT",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "CONFIRM",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 96
+        }
+      }
+    ]
+  },
+  "version": 1
+}

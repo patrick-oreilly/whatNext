@@ -1,0 +1,2 @@
+Target dependency graph (1 target)
+Target 'WhatNext' in project 'WhatNext' (no dependencies)

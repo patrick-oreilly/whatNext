@@ -1,0 +1,125 @@
+INFO         | Android emulator version 36.4.9.0 (build_id 14788078) (CL:N/A)
+INFO         | Graphics backend: gfxstream
+INFO         | Found systemPath /Users/patrickoreilly/Library/Android/sdk/system-images/android-36.1/google_apis_playstore/arm64-v8a/
+WARNING      | Please update the emulator to one that supports the feature(s): VulkanVirtualQueue
+INFO         | Guest GLES Driver: Auto (ext controls)
+INFO         | emuglConfig_init: vulkan_mode_selected:lavapipe gles_mode_selected:host
+INFO         | Checking system compatibility:
+INFO         |   Checking: hasSufficientDiskSpace
+INFO         |      Ok: Disk space requirements to run avd: `Medium_Phone_API_36.1` are met
+INFO         |   Checking: hasSufficientHwGpu
+INFO         |      Ok: Hardware GPU compatibility checks are not required
+INFO         |   Checking: hasSufficientSystem
+INFO         |      Ok: System requirements to run avd: `Medium_Phone_API_36.1` are met
+INFO         | Storing crashdata in: /tmp/android-patrickoreilly/emu-crash-36.4.9.db, detection is enabled for process: 16886
+INFO         | Initializing gfxstream backend
+INFO         | android_startOpenglesRenderer: gpu info
+INFO         | 
+INFO         | initIcdPaths: ICD set to 'lavapipe', using Lavapipe ICD
+INFO         | Setting ICD filenames for the loader = /Users/patrickoreilly/Library/Android/sdk/emulator/lib64/vulkan/lvp_icd.json
+INFO         | SharedLibrary::open for [/Users/patrickoreilly/Library/Android/sdk/emulator/qemu/darwin-aarch64/lib64/vulkan/libvulkan.dylib]
+INFO         | Added library: /Users/patrickoreilly/Library/Android/sdk/emulator/qemu/darwin-aarch64/lib64/vulkan/libvulkan.dylib
+INFO         | Enabling Vulkan portability.
+INFO         | Selecting Vulkan device: llvmpipe (LLVM 21.1.4, 128 bits), Version: 1.4.330
+INFO         | Initializing VkEmulation features:
+INFO         |     glInteropSupported: false
+INFO         |     useDeferredCommands: true
+INFO         |     createResourceWithRequirements: true
+INFO         |     useVulkanComposition: false
+INFO         |     useVulkanNativeSwapchain: false
+INFO         |     enable guestRenderDoc: false
+INFO         |     ASTC LDR emulation mode: Gpu
+INFO         |     enable ETC2 emulation: true
+INFO         |     enable Ycbcr emulation: false
+INFO         |     guestVulkanOnly: false
+INFO         |     useDedicatedAllocations: false
+INFO         | Graphics Adapter Vendor Google (Apple)
+INFO         | Graphics Adapter Android Emulator OpenGL ES Translator (Apple M1 Max)
+INFO         | Graphics API Version OpenGL ES 3.0 (4.1 Metal - 90.5)
+INFO         | Graphics API Extensions GL_OES_EGL_sync GL_OES_EGL_image GL_OES_EGL_image_external GL_OES_depth24 GL_OES_depth32 GL_OES_element_index_uint GL_OES_texture_float GL_OES_texture_float_linear GL_OES_compressed_paletted_texture GL_OES_compressed_ETC1_RGB8_texture GL_OES_depth_texture GL_OES_texture_npot GL_OES_rgb8_rgba8 GL_EXT_color_buffer_float GL_EXT_color_buffer_half_float GL_EXT_texture_format_BGRA8888 GL_APPLE_texture_format_BGRA8888 
+INFO         | Graphics Device Extensions N/A
+INFO         | Disabling sparse binding feature support
+INFO         | Sending adb public key [QAAAAAPI7OtV3T0zaV9D1HDuCx2TQbVR+cAvvGWe/oo8WSnfywTK3Mt5M3V08xHxZzadv+uTGNDhVeUy0DKndMwi9K34WOZhYQFPl2RBmLyGdF0eHam/HCNJxrcNYoGP1dEICIt/4sluK5E2hEbA0K2BVMXNUPb9Qg4l7EGAi0nwoWp9h+xAwNGRz7FzrC5OlYQzpjnk+3Ss2NM/b3DLmaBPlyNJOcZwwYQfEONTJHgTVy2t97WTeq/SIPnr9Ggrs2GXmGqwpQAhB7AqefPgP00HxoAe/tDERJnVj3vihsb8nzZJqwlU42yor2LsFO3IszVOzWqeLjqyNuvOPeazvivBTu7Yke2kJ0yiUSjwSAVYC/B/jLDH42AwDFh27Qyq5RTzxMBoS/esf4nj8CiAgR8dYxeCNA6977nOIb7Ls9JjJOJ1t6hkJcX+oJ80NAwPOWltx5jbjI3tXl0jvfH4/e+MjhmNKw2pVyuco/BC7jCmUtR2TjkvsbgwSeFcV/LpnncL2y+wlxC6gfh/VmE4cpGQQlXyBX05UZ16O/pXSoKY34tQ0iMqGhxSxscWI1tJvMlt8Z5AMAq4dOmYxeac2LlDsraQkqHLB5Cid7Eg3y80KytOdZtar8aOEjiYmYECRy3RNpGq/DgObgpRs4cbZ0JaP5U2+9QQXIAdJpXhdAkruZ+7IUotaAEAAQA= patrickoreilly@unknown]
+INFO         | Userspace boot properties:
+INFO         |   androidboot.boot_devices=a003600.virtio_mmio
+INFO         |   androidboot.dalvik.vm.heapsize=512m
+INFO         |   androidboot.debug.hwui.renderer=skiagl
+INFO         |   androidboot.hardware=ranchu
+INFO         |   androidboot.hardware.gltransport=pipe
+INFO         |   androidboot.hardware.vulkan=ranchu
+INFO         |   androidboot.logcat=*:V
+INFO         |   androidboot.opengles.version=196608
+INFO         |   androidboot.qemu=1
+INFO         |   androidboot.qemu.adb.pubkey=QAAAAAPI7OtV3T0zaV9D1HDuCx2TQbVR+cAvvGWe/oo8WSnfywTK3Mt5M3V08xHxZzadv+uTGNDhVeUy0DKndMwi9K34WOZhYQFPl2RBmLyGdF0eHam/HCNJxrcNYoGP1dEICIt/4sluK5E2hEbA0K2BVMXNUPb9Qg4l7EGAi0nwoWp9h+xAwNGRz7FzrC5OlYQzpjnk+3Ss2NM/b3DLmaBPlyNJOcZwwYQfEONTJHgTVy2t97WTeq/SIPnr9Ggrs2GXmGqwpQAhB7AqefPgP00HxoAe/tDERJnVj3vihsb8nzZJqwlU42yor2LsFO3IszVOzWqeLjqyNuvOPeazvivBTu7Yke2kJ0yiUSjwSAVYC/B/jLDH42AwDFh27Qyq5RTzxMBoS/esf4nj8CiAgR8dYxeCNA6977nOIb7Ls9JjJOJ1t6hkJcX+oJ80NAwPOWltx5jbjI3tXl0jvfH4/e+MjhmNKw2pVyuco/BC7jCmUtR2TjkvsbgwSeFcV/LpnncL2y+wlxC6gfh/VmE4cpGQQlXyBX05UZ16O/pXSoKY34tQ0iMqGhxSxscWI1tJvMlt8Z5AMAq4dOmYxeac2LlDsraQkqHLB5Cid7Eg3y80KytOdZtar8aOEjiYmYECRy3RNpGq/DgObgpRs4cbZ0JaP5U2+9QQXIAdJpXhdAkruZ+7IUotaAEAAQA= patrickoreilly@unknown
+INFO         |   androidboot.qemu.avd_name=Medium_Phone_API_36.1
+INFO         |   androidboot.qemu.camera_hq_edge_processing=0
+INFO         |   androidboot.qemu.camera_protocol_ver=1
+INFO         |   androidboot.qemu.cpuvulkan.version=4202496
+INFO         |   androidboot.qemu.gltransport.drawFlushInterval=800
+INFO         |   androidboot.qemu.gltransport.name=pipe
+INFO         |   androidboot.qemu.hwcodec.avcdec=2
+INFO         |   androidboot.qemu.hwcodec.hevcdec=2
+INFO         |   androidboot.qemu.hwcodec.vpxdec=2
+INFO         |   androidboot.qemu.settings.system.screen_off_timeout=2147483647
+INFO         |   androidboot.qemu.skin=1080x2400
+INFO         |   androidboot.qemu.virtiowifi=1
+INFO         |   androidboot.qemu.vsync=60
+INFO         |   androidboot.serialno=EMULATOR36X4X9X0
+INFO         |   androidboot.vbmeta.digest=ad488d287a40d2a1b51348f0b86e7545b016163b9793e4ba3491d16b4c8a5e18
+INFO         |   androidboot.vbmeta.hash_alg=sha256
+INFO         |   androidboot.vbmeta.size=6720
+INFO         |   androidboot.veritymode=enforcing
+INFO         | Monitoring duration of emulator setup.
+WARNING      | The emulator now requires a signed jwt token for gRPC access! Use the -grpc flag if you really want an open unprotected grpc port
+INFO         | Using security allow list from: /Users/patrickoreilly/Library/Android/sdk/emulator/lib/emulator_access.json
+WARNING      | *** Basic token auth should only be used by android-studio ***
+INFO         | The active JSON Web Key Sets can be found here: /Users/patrickoreilly/Library/Caches/TemporaryItems/avd/running/16886/jwks/9c636c86-4b6a-4a15-bdd0-d8682ffc655e/active.jwk
+INFO         | Scanning /Users/patrickoreilly/Library/Caches/TemporaryItems/avd/running/16886/jwks/9c636c86-4b6a-4a15-bdd0-d8682ffc655e for jwk keys.
+INFO         | Started GRPC server at 127.0.0.1:8554, security: Local, auth: +token
+INFO         | Advertising in: /Users/patrickoreilly/Library/Caches/TemporaryItems/avd/running/pid_16886.ini
+INFO         | Setting display: 0 configuration to: 1080x2400, dpi: 420x420 
+INFO         | setDisplayActiveConfig 0
+INFO         | Checking system compatibility:
+INFO         |   Checking: hasSufficientDiskSpace
+INFO         |      Ok: Disk space requirements to run avd: `Medium_Phone_API_36.1` are met
+INFO         |   Checking: hasSufficientHwGpu
+INFO         |      Ok: Hardware GPU compatibility checks are not required
+INFO         |   Checking: hasSufficientSystem
+INFO         |      Ok: System requirements to run avd: `Medium_Phone_API_36.1` are met
+INFO         | Warning: QMetaObject::connectSlotsByName: No matching signal for on_rgbcSensorValueWidget_valueChanged() (:0, )
+INFO         | Warning: QMetaObject::connectSlotsByName: No matching signal for on_posture_valueChanged(int) (:0, )
+INFO         | Loading snapshot 'default_boot'...
+WARNING      | Device 'encrypt' does not have the requested snapshot 'default_boot'
+
+WARNING      | Failed to process .ini file /Users/patrickoreilly/.android/emu-update-last-check.ini for reading.
+WARNING      | Failed to load snapshot 'default_boot'
+INFO         | Warning: QObject::connect: Cannot queue arguments of type 'std::vector<android::emulation::control::SnapshotInfo>'
+(Make sure 'std::vector<android::emulation::control::SnapshotInfo>' is registered using qRegisterMetaType().) (:0, )
+INFO         | AVD supportsNativeGLES=1, supportsGuestAngle=1
+INFO         | Guest Angle is still unstable for API > 35.
+INFO         | Created extended window in 354.626ms
+WARNING      | Failed to process .ini file /Users/patrickoreilly/.android/emu-update-last-check.ini for reading.
+INFO         | Activated packet streamer for uwb emulation
+INFO         | Activated packet streamer for bluetooth emulation
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=361.731,178.142 gbl=361.731,178.142 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-361.731,-178.142 last=-361.731,-178.142 Δ 361.731,178.142) : no target window (:0, )
+WARNING      | adb command '/Users/patrickoreilly/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell getprop sys.boot_completed ' failed: 'adb: device offline'
+WARNING      | adb command '/Users/patrickoreilly/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell getprop sys.boot_completed ' failed: 'adb: device offline'
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=872.522,345.34 gbl=872.522,345.34 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-872.522,-345.34 last=-872.522,-345.34 Δ 872.522,345.34) : no target window (:0, )
+WARNING      | adb command '/Users/patrickoreilly/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell getprop sys.boot_completed ' failed: 'adb: device offline'
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=974.532,452.084 gbl=974.532,452.084 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-974.532,-452.084 last=-974.532,-452.084 Δ 974.532,452.084) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=911.931,264.821 gbl=911.931,264.821 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-911.931,-264.821 last=-911.931,-264.821 Δ 911.931,264.821) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=845.445,330.878 gbl=845.445,330.878 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-845.445,-330.878 last=-845.445,-330.878 Δ 845.445,330.878) : no target window (:0, )
+INFO         | Boot completed in 45284 ms
+INFO         | Increasing screen off timeout, logcat buffer size to 2M.
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=997.123,144.929 gbl=997.123,144.929 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-997.123,-144.929 last=-997.123,-144.929 Δ 997.123,144.929) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=1128.91,199.491 gbl=1128.91,199.491 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-1128.91,-199.491 last=-1128.91,-199.491 Δ 1128.91,199.491) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=1087.68,722.84 gbl=1087.68,722.84 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-1087.68,-722.84 last=-1087.68,-722.84 Δ 1087.68,722.84) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=1012.26,559.482 gbl=1012.26,559.482 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-1012.26,-559.482 last=-1012.26,-559.482 Δ 1012.26,559.482) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=882.936,550.589 gbl=882.936,550.589 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-882.936,-550.589 last=-882.936,-550.589 Δ 882.936,550.589) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=1079.95,534.097 gbl=1079.95,534.097 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-1079.95,-534.097 last=-1079.95,-534.097 Δ 1079.95,534.097) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=899.686,489.776 gbl=899.686,489.776 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-899.686,-489.776 last=-899.686,-489.776 Δ 899.686,489.776) : no target window (:0, )
+INFO         | Warning: skipping QEventPoint(id=1 ts=0 pos=0,0 scn=947.614,710.856 gbl=947.614,710.856 Released ellipse=(1x1 ∡ 0) vel=0,0 press=-947.614,-710.856 last=-947.614,-710.856 Δ 947.614,710.856) : no target window (:0, )
+INFO         | Wait for emulator (pid 16886) 20 seconds to shutdown gracefully before kill;you can set environment variable ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL(in seconds) to change the default value (20 seconds)
+
+INFO         | Saving with gfxstream=1
+INFO         | Saving snapshot 'default_boot' using 3503 ms

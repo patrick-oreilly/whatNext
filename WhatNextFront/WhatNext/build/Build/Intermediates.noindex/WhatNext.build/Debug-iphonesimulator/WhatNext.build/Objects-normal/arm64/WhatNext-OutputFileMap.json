@@ -1,0 +1,159 @@
+{
+  "" : {
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNext-primary.dia",
+    "emit-module-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNext-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNext-primary-emit-module.dia",
+    "pch" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNext-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNext-primary.swiftdeps"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/ContentView.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/FindGame.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/FindGame~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/GamePage/GameChoices.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameChoices~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/GamePage/GameView.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameView~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/GamePage/PromptScreen.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/PromptScreen~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/GamePage/VoteScreen.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/VoteScreen~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/Lobby.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/Lobby~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/Models/APIModels.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIModels~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/Models/DataModels.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/DataModels~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/Models/GameTypes.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameTypes~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/Services/APIService.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/APIService~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/Services/SSEStreamManager.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/SSEStreamManager~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/ViewModels/GameStateManager.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GameStateManager~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/WhatNext/WhatNextApp.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/WhatNextApp~partial.swiftmodule"
+  },
+  "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/patrickoreilly/Desktop/whats_next/WhatNextFront/WhatNext/build/Build/Intermediates.noindex/WhatNext.build/Debug-iphonesimulator/WhatNext.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}
