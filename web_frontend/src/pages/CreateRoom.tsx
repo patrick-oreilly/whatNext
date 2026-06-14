@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Input } from '../components/common';
-import { roomsApi } from '../api/rooms';
+import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
 import { useLocalStorage } from '../hooks';
 import { STORAGE_KEYS, DEFAULT_TURNS } from '../utils/constants';
@@ -41,13 +41,13 @@ export const CreateRoom: React.FC = () => {
 
     try {
       // Create room
-      const response = await roomsApi.createRoom({
+      const response = await GameApi.createRoom({
         storyline,
         max_turns: maxTurns,
       });
 
       // Join the room
-      await roomsApi.joinRoom({
+      await GameApi.joinRoom({
         room_id: response.room_id,
         player_name: playerName.trim(),
       });

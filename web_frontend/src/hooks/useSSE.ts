@@ -1,7 +1,7 @@
 // Server-Sent Events hook
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { createStoryStream } from '../api/stream';
+import { GameApi } from '../api/GameApi';
 
 export const useSSE = () => {
   const [streamedText, setStreamedText] = useState('');
@@ -19,7 +19,7 @@ export const useSSE = () => {
     setStreamedText('');
     setError(null);
 
-    cleanupRef.current = createStoryStream(roomId, {
+    cleanupRef.current = GameApi.createStoryStream(roomId, {
       onChunk: (text) => {
         setStreamedText((prev) => prev + text);
       },

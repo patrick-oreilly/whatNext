@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Spinner } from '../components/common';
 import { PlayerList } from '../components/lobby/PlayerList';
 import { RoomCode } from '../components/lobby/RoomCode';
-import { roomsApi } from '../api/rooms';
+import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
 import { GamePhase } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
@@ -25,7 +25,7 @@ export const Lobby: React.FC = () => {
     if (!roomId) return;
 
     try {
-      const state = await roomsApi.getRoomState(roomId);
+      const state = await GameApi.getRoomState(roomId);
       setRoomState(state);
 
       if (state.phase === GamePhase.PLAYER_INPUT || state.phase === GamePhase.GENERATING_STORY) {
@@ -57,7 +57,7 @@ export const Lobby: React.FC = () => {
     if (!roomId) return;
 
     try {
-      await roomsApi.startGame(roomId);
+      await GameApi.startGame(roomId);
       // State will be updated by polling, which will trigger navigation
     } catch (error) {
       if (error instanceof Error) {

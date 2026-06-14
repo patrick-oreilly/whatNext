@@ -11,8 +11,7 @@ import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
 import { VotingTimer } from '../components/game/VotingTimer';
 import { Icon } from '../components/common/Icon';
-import { roomsApi } from '../api/rooms';
-import { gameplayApi } from '../api/gameplay';
+import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
 import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
 import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
@@ -102,7 +101,7 @@ export const Game: React.FC = () => {
   const fetchVotingResults = useCallback(async () => {
     if (!roomId) return;
     try {
-      const results = await gameplayApi.getVotingResults(roomId);
+      const results = await GameApi.getVotingResults(roomId);
       setVotingResults(results);
       setShowResults(true);
     } catch (e) {
@@ -116,7 +115,7 @@ export const Game: React.FC = () => {
 
     try {
       console.log('🔄 [fetchRoomState] Fetching room state from API...');
-      const state = await roomsApi.getRoomState(roomId);
+      const state = await GameApi.getRoomState(roomId);
       console.log('📥 [fetchRoomState] Received state from API:', {
         phase: state.phase,
         turn: state.turn,
@@ -308,7 +307,7 @@ export const Game: React.FC = () => {
      ----------------------------------------------------------------------- */
   const handleSubmitInput = async (text: string) => {
     if (!roomId || !currentPlayer) return;
-    await gameplayApi.submitInput({
+    await GameApi.submitInput({
       room_id: roomId,
       player_name: currentPlayer,
       input_text: text,
@@ -318,7 +317,7 @@ export const Game: React.FC = () => {
 
   const handleVote = async (chosenPlayer: string) => {
     if (!roomId || !currentPlayer) return;
-    await gameplayApi.castVote({
+    await GameApi.castVote({
       room_id: roomId,
       voter: currentPlayer,
       chosen_player: chosenPlayer,
@@ -332,7 +331,7 @@ export const Game: React.FC = () => {
     try {
       setShowResults(false);
       setVotingResults(null);
-      await gameplayApi.advanceTurn(roomId);
+      await GameApi.advanceTurn(roomId);
       await fetchRoomState();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to advance turn');
@@ -353,7 +352,7 @@ export const Game: React.FC = () => {
     try {
       console.log('🏁 Story has ended, calling endGame API to transition to GAME_OVER');
       // Call API to properly end the game (set phase to GAME_OVER, close ADK session)
-      await gameplayApi.endGame(roomId);
+      await GameApi.endGame(roomId);
       // Navigate to game over screen
       navigate(`/gameover/${roomId}`);
     } catch (e) {
@@ -386,12 +385,12 @@ export const Game: React.FC = () => {
 
       // Check current phase before calling timeout handler
       await fetchRoomState();
-      const updatedRoom = await roomsApi.getRoomState(roomId);
+      const updatedRoom = await GameApi.getRoomState(roomId);
 
       if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
         console.log('📞 [Game] Calling backend timeout handler...');
         try {
-          await gameplayApi.triggerInputTimeout(roomId);
+          await GameApi.triggerInputTimeout(roomId);
           console.log('✅ [Game] Backend timeout handler completed');
         } catch (e) {
           console.error('❌ [Game] Failed to trigger timeout:', e);
@@ -410,13 +409,13 @@ export const Game: React.FC = () => {
       // Check current phase before calling timeout
       console.log('🔄 [Game] Checking current phase before timeout call...');
       await fetchRoomState();
-      const updatedRoom = await roomsApi.getRoomState(roomId);
+      const updatedRoom = await GameApi.getRoomState(roomId);
       console.log('📊 [Game] Current phase:', updatedRoom.phase);
 
       // Only call timeout handler if still in PLAYER_INPUT phase
       if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
         console.log('📞 [Game] Phase is PLAYER_INPUT, calling timeout handler to mark player as timed out...');
-        await gameplayApi.triggerInputTimeout(roomId);
+        await GameApi.triggerInputTimeout(roomId);
         console.log('✅ [Game] Timeout handler called - player marked as timed out');
 
         // Refresh state after timeout
@@ -452,13 +451,13 @@ export const Game: React.FC = () => {
     try {
       // Check current phase before calling timeout
       console.log('🔄 [Game] Checking current phase before voting timeout call...');
-      const updatedRoom = await roomsApi.getRoomState(roomId);
+      const updatedRoom = await GameApi.getRoomState(roomId);
       console.log('📊 [Game] Current phase:', updatedRoom.phase);
 
       // Only call timeout handler if still in VOTING phase
       if (updatedRoom.phase === GamePhase.VOTING) {
         console.log('📞 [Game] Phase is VOTING, calling voting timeout handler...');
-        await gameplayApi.triggerVotingTimeout(roomId);
+        await GameApi.triggerVotingTimeout(roomId);
         console.log('✅ [Game] Voting timeout handled - calculating winner with current votes');
 
         // Fetch voting results after timeout

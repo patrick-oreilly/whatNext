@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
-import { roomsApi } from '../api/rooms';
+import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
 import { Icon } from '../components/common/Icon';
 import { Crown, PartyPopper, Trophy } from 'lucide-react';
@@ -19,7 +19,7 @@ export const GameOver: React.FC = () => {
     if (!roomId) return;
 
     try {
-      const state = await roomsApi.getRoomState(roomId);
+      const state = await GameApi.getRoomState(roomId);
       setRoomState(state);
     } catch (err) {
       console.error('Failed to load final state:', err);
