@@ -6,8 +6,9 @@ import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
 import { PlayerStatus } from '../components/game/PlayerStatus';
 import { GeneratingStoryPhase } from '../components/game/GeneratingStoryPhase';
-import { StoryMarkdown, markdownComponents } from '../components/game/StoryMarkdown';
-import { PlayerInput } from '../components/game/PlayerInput';
+import { StoryMarkdown } from '../components/game/StoryMarkdown';
+import { markdownComponents } from '../components/game/markdownComponents.tsx';
+import { PlayerInputPhase } from '../components/game/PlayerInputPhase';
 import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
 import { VotingTimer } from '../components/game/VotingTimer';
@@ -64,16 +65,10 @@ export const Game: React.FC = () => {
   const [hasVoted, setHasVoted] = useState(false);
   const [votingResults, setVotingResults] = useState<VotingResultsResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
   const [votingTimeoutSeconds, setVotingTimeoutSeconds] = useState<number>(60);
-  const [timedOutPlayers, setTimedOutPlayers] = useState<string[]>([]);
+  const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
 
   // 4. Derived values (safe — after early returns)
-  const currentInput = useMemo(
-    () => roomState?.player_inputs.find(i => i.player_name === currentPlayer),
-    [roomState?.player_inputs, currentPlayer]
-  );
-  const hasSubmitted = !!currentInput;
 
   // 5. fetchVotingResults
   const fetchVotingResults = useCallback(async () => {
@@ -104,14 +99,6 @@ export const Game: React.FC = () => {
       console.log('💾 [fetchRoomState] Updating React state with setRoomState...');
       setRoomState(state);
       console.log('✅ [fetchRoomState] React state updated');
-
-      if (state.phase === GamePhase.PLAYER_INPUT) {
-        console.log('⏱️ [Game] Setting up PLAYER_INPUT phase timer');
-        console.log('⏱️ [Game] input_phase_start_time from backend:', state.input_phase_start_time);
-        console.log('⏱️ [Game] timed_out_players from backend:', state.timed_out_players);
-        setTimerStartTime(state.input_phase_start_time ?? null);
-        setTimedOutPlayers(state.timed_out_players ?? []);
-      }
 
       if (state.phase === GamePhase.GAME_OVER) {
         navigate(`/gameover/${roomId}`);
@@ -238,16 +225,6 @@ export const Game: React.FC = () => {
   /* -----------------------------------------------------------------------
      Handlers (after hooks)
      ----------------------------------------------------------------------- */
-  const handleSubmitInput = async (text: string) => {
-    if (!roomId || !currentPlayer) return;
-    await GameApi.submitInput({
-      room_id: roomId,
-      player_name: currentPlayer,
-      input_text: text,
-    });
-    await fetchRoomState();
-  };
-
   const handleVote = async (chosenPlayer: string) => {
     if (!roomId || !currentPlayer) return;
     await GameApi.castVote({
@@ -288,83 +265,6 @@ export const Game: React.FC = () => {
       navigate(`/gameover/${roomId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to end game');
-    }
-  };
-
-  const handleInputTimeout = async (currentInput: string) => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('⏰ [Game] Input timeout triggered!');
-    console.log('⏰ [Game] Draft input received (NOT submitting):', currentInput);
-    console.log('⏰ [Game] Draft length:', currentInput.length);
-    console.log('⏰ [Game] Policy: No auto-submit on timeout - draft discarded');
-    console.log('⏰ [Game] Room ID:', roomId);
-    console.log('⏰ [Game] Current Player:', currentPlayer);
-    console.log('═══════════════════════════════════════════════════════');
-
-    if (!roomId || !currentPlayer) {
-      console.error('❌ [Game] Missing roomId or currentPlayer, aborting timeout handler');
-      return;
-    }
-
-    // Check if already submitted manually (before timeout)
-    console.log('🔍 [Game] Checking if player already submitted manually...');
-    const alreadySubmitted = roomState.player_inputs.some(i => i.player_name === currentPlayer);
-    console.log('🔍 [Game] Already submitted?', alreadySubmitted);
-
-    if (alreadySubmitted) {
-      console.log('✓ [Game] Player already submitted manually, no action needed');
-
-      // Check current phase before calling timeout handler
-      await fetchRoomState();
-      const updatedRoom = await GameApi.getRoomState(roomId);
-
-      if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
-        console.log('📞 [Game] Calling backend timeout handler...');
-        try {
-          await GameApi.triggerInputTimeout(roomId);
-          console.log('✅ [Game] Backend timeout handler completed');
-        } catch (e) {
-          console.error('❌ [Game] Failed to trigger timeout:', e);
-        }
-        await fetchRoomState();
-      } else {
-        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
-      }
-      return;
-    }
-
-    console.log('⏰ [Game] Player did NOT submit manually - timing out without submission');
-    console.log('⏰ [Game] Draft discarded (length:', currentInput.length, ')');
-
-    try {
-      // Check current phase before calling timeout
-      console.log('🔄 [Game] Checking current phase before timeout call...');
-      await fetchRoomState();
-      const updatedRoom = await GameApi.getRoomState(roomId);
-      console.log('📊 [Game] Current phase:', updatedRoom.phase);
-
-      // Only call timeout handler if still in PLAYER_INPUT phase
-      if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
-        console.log('📞 [Game] Phase is PLAYER_INPUT, calling timeout handler to mark player as timed out...');
-        await GameApi.triggerInputTimeout(roomId);
-        console.log('✅ [Game] Timeout handler called - player marked as timed out');
-
-        // Refresh state after timeout
-        console.log('🔄 [Game] Fetching updated state...');
-        await fetchRoomState();
-        console.log('✅ [Game] State refreshed');
-      } else {
-        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
-        console.log('⏩ [Game] Another player already triggered timeout, no action needed');
-        await fetchRoomState();
-      }
-
-    } catch (e) {
-      console.error('═══════════════════════════════════════════════════════');
-      console.error('❌ [Game] TIMEOUT HANDLING ERROR!');
-      console.error('❌ [Game] Error:', e);
-      console.error('═══════════════════════════════════════════════════════');
-      setError('An error occurred while handling the timeout.');
     }
   };
 
@@ -488,23 +388,16 @@ export const Game: React.FC = () => {
                       </ReactMarkdown>
                     </div>
 
-                    {timedOutPlayers.length > 0 && (
+                    {roomState.timed_out_players && roomState.timed_out_players.length > 0 && (
                       <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
                         <p className="text-accent-white font-bold text-center">
-                          Timer: {timedOutPlayers.join(', ')} did not submit in time
+                          Timer: {roomState.timed_out_players.join(', ')} did not submit in time
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <PlayerInput
-                    onSubmit={handleSubmitInput}
-                    hasSubmitted={hasSubmitted}
-                    submissionCount={roomState.player_inputs.length}
-                    totalPlayers={roomState.players.length}
-                    timerStartTime={timerStartTime}
-                    onTimeout={handleInputTimeout}
-                  />
+                  <PlayerInputPhase />
                 </Card>
               </div>
             )}
@@ -514,10 +407,10 @@ export const Game: React.FC = () => {
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
-                    {timedOutPlayers.length > 0 && (
+                    {(roomState.timed_out_players ?? []).length > 0 && (
                       <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
                         <p className="text-accent-white font-bold text-center">
-                          Timer: {timedOutPlayers.join(', ')} did not submit in time
+                          Timer: {roomState.timed_out_players!.join(', ')} did not submit in time
                         </p>
                       </div>
                     )}

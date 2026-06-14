@@ -6,7 +6,7 @@ import { Icon } from '../common/Icon';
 import { GameApi } from '../../api/GameApi';
 import { useGameStore } from '../../store/gameStore';
 import { Flag } from 'lucide-react';
-import { markdownComponents } from './StoryMarkdown';
+import { markdownComponents } from './markdownComponents.tsx';
 
 interface GeneratingStoryPhaseProps {
   roomId: string;

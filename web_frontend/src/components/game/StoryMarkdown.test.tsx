@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { StoryMarkdown, markdownComponents } from './StoryMarkdown';
+import { StoryMarkdown } from './StoryMarkdown';
+import { markdownComponents } from './markdownComponents.tsx';
 
 describe('StoryMarkdown', () => {
   it('renders markdown text', () => {
