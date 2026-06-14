@@ -10,6 +10,9 @@ from backend.core.models import (
     GameRoom, GamePhase, StoryLineType, LlmOutput, PlayerInput,
     TurnResult, TurnDirective
 )
+from backend.core.errors import (
+    InvalidGamePhaseError, PlayerNotInRoomError
+)
 from backend.core.storage import InMemoryStorage
 from backend.core.config import settings
 from backend.game_management.room_manager import RoomManager
@@ -232,6 +235,21 @@ class TestSubmitAndVote:
         result2 = game_turn.submit_input(populated_room, "Bob", "Pass it inside!")
         assert result2.response["submissions"] == 2
         assert result2.phase == GamePhase.VOTING
+
+    def test_submit_input_invalid_phase(self, game_turn, populated_room):
+        """submit_input raises InvalidGamePhaseError when not in PLAYER_INPUT."""
+        game_turn.start_game(populated_room)
+        with pytest.raises(InvalidGamePhaseError):
+            game_turn.submit_input(populated_room, "Alice", "Can't submit yet!")
+
+    def test_submit_input_player_not_in_room(self, game_turn, room_manager, populated_room):
+        """submit_input raises PlayerNotInRoomError for unknown players."""
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.PLAYER_INPUT
+        room_manager.save_room(room)
+        with pytest.raises(PlayerNotInRoomError):
+            game_turn.submit_input(populated_room, "Stranger", "Intruder!")
 
     def test_cast_vote(self, game_turn, room_manager, populated_room):
         game_turn.start_game(populated_room)
