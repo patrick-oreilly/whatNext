@@ -8,7 +8,10 @@
 import SwiftUI
 
 struct PromptScreen: View {
-    @ObservedObject var viewModel: GameViewModel
+    @EnvironmentObject var gameState: GameStateManager
+    @State private var localPromptData: String = ""
+    @State private var navigateToVote = false
+    @State private var hasSubmitted = false
     
     var body: some View {
             ZStack{
@@ -46,52 +49,69 @@ struct PromptScreen: View {
                     }
                     
                     
-                    Text("It's draft night, what should he choose to do?")
+                    Text(gameState.parsedDecisionPrompt)
                         .font(.system(size: 25))
                         .fontWeight(.heavy)
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 30)
+                        .multilineTextAlignment(.center)
                     
-                    
-                    TextField("Enter prompt here...", text: $viewModel.prompt)
-                        .font(.system(size: 20, weight: .bold))
-                        .padding()
-                        .background(Color.white.opacity(0.75))
-                        .cornerRadius(10)
-                        .padding(.horizontal)
-                        .padding(.bottom, -15)
-                    
-                    NavigationLink(destination: VoteScreen(viewModel: GameViewModel())){
-                        Text("SUBMIT")
-                            .font(.system(size: 30))
-                            .fontWeight(.heavy)
-                            .foregroundStyle(Color.white)
-                            .padding(.vertical, 5)
-                            .padding(.horizontal, 30)
-                            .background(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .foregroundColor(Color.black)
-                                
-                            )
-                            .frame(maxWidth: .infinity)
+                    if hasSubmitted {
+                        Text("Waiting for others...")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                    } else {
+                        TextField("Enter prompt here...", text: $localPromptData)
+                            .font(.system(size: 20, weight: .bold))
+                            .padding()
+                            .background(Color.white.opacity(0.75))
+                            .cornerRadius(10)
+                            .padding(.horizontal)
+                            .padding(.bottom, -15)
                     }
-                    .disabled(viewModel.prompt == "")
-                    .opacity(viewModel.prompt != "" ? 1.0 : 0.5)
+                    
+                    Button(action: {
+                        Task {
+                            await gameState.submitIdea(text: localPromptData)
+                            hasSubmitted = true
+                        }
+                    }) {
+                        if gameState.isLoading && !hasSubmitted {
+                            ProgressView().scaleEffect(1.5).padding()
+                        } else {
+                            Text("SUBMIT")
+                                .font(.system(size: 30))
+                                .fontWeight(.heavy)
+                                .foregroundStyle(Color.white)
+                                .padding(.vertical, 5)
+                                .padding(.horizontal, 30)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .foregroundColor(Color.black)
+                                )
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .disabled(localPromptData.isEmpty || hasSubmitted || gameState.isLoading)
+                    .opacity(localPromptData.isEmpty || hasSubmitted ? 0.5 : 1.0)
                     .padding(30)
                     
                     Spacer()
                     
-                    HStack{
-                        ForEach(viewModel.players, id: \.self) { player in
-                            VStack{
-                                if (viewModel.players.firstIndex(of: player) ?? 0) % 2 == 1 {
+                    HStack {
+                        ForEach(gameState.players, id: \.self) { player in
+                            VStack {
+                                // Check if this player has submitted by finding them in currentSubmissions
+                                let hasPlayerSubmitted = gameState.currentSubmissions.contains(where: { $0.playerName == player })
+                                
+                                if hasPlayerSubmitted {
                                     Image(systemName: "checkmark")
                                         .foregroundColor(.black)
                                         .fontWeight(.heavy)
                                         .frame(height: 15)
                                         .frame(width: 50)
                                 } else {
-                                    // Empty space so layout stays consistent
                                     Color.clear
                                         .frame(height: 15)
                                         .frame(width: 50)
@@ -105,14 +125,25 @@ struct PromptScreen: View {
                                     .foregroundStyle(Color.white)
                             }
                         }
+                    }
                     
                 }
             }
+        // Auto navigate or programmatic navigate to vote screen when ready
+        .navigationDestination(isPresented: $navigateToVote) {
+             VoteScreen()
+        }
+        .onChange(of: gameState.currentPhase) { newPhase in
+            if newPhase == .voting {
+                navigateToVote = true
             }
-        
+        }
     }
 }
 
 #Preview {
-    PromptScreen(viewModel: GameViewModel())
+    NavigationView {
+        PromptScreen()
+            .environmentObject(GameStateManager())
+    }
 }
