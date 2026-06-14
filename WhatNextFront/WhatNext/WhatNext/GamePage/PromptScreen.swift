@@ -133,7 +133,7 @@ struct PromptScreen: View {
         .navigationDestination(isPresented: $navigateToVote) {
              VoteScreen()
         }
-        .onChange(of: gameState.currentPhase) { newPhase in
+        .onChange(of: gameState.currentPhase) { _, newPhase in
             if newPhase == .voting {
                 navigateToVote = true
             }

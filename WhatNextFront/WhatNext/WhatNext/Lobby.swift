@@ -153,7 +153,7 @@ struct Lobby: View {
             }
         }
         // Auto-navigate when game moves from Lobby to Generating Story phase
-        .onChange(of: gameState.currentPhase) { newPhase in
+        .onChange(of: gameState.currentPhase) { _, newPhase in
             if newPhase == .generatingStory {
                 navigateToGame = true
             }

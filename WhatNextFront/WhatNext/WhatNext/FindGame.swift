@@ -76,7 +76,7 @@ struct FindGame: View {
                                 .cornerRadius(10)
                                 .padding(.horizontal)
                                 .autocorrectionDisabled()
-                                .onChange(of: roomCode) { newValue in
+                                .onChange(of: roomCode) { _, newValue in
                                     roomCode = String(newValue.uppercased().prefix(6))
                                 }
                     

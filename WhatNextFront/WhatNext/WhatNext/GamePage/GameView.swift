@@ -73,14 +73,12 @@ struct GameView: View {
                     HStack{
                         ForEach(gameState.players, id: \.self) { player in
                             VStack{
-                                if let index = gameState.players.firstIndex(of: player) {
-                                    let score = gameState.scores[player] ?? 0
-                                    
-                                    Text("\(score)")
-                                        .font(.system(size: 20))
-                                        .fontWeight(.heavy)
-                                        .foregroundStyle(Color.white)
-                                }
+                                let score = gameState.scores[player] ?? 0
+
+                                Text("\(score)")
+                                    .font(.system(size: 20))
+                                    .fontWeight(.heavy)
+                                    .foregroundStyle(Color.white)
                                 
                                 Image(systemName: "person.fill")
                                     .resizable()
@@ -99,7 +97,7 @@ struct GameView: View {
         .navigationDestination(isPresented: $navigateToPrompt) {
             PromptScreen()
         }
-        .onChange(of: gameState.currentPhase) { newPhase in
+        .onChange(of: gameState.currentPhase) { _, newPhase in
             if newPhase == .playerInput {
                 navigateToPrompt = true
             }

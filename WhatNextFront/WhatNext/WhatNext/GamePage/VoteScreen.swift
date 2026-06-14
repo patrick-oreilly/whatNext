@@ -147,7 +147,7 @@ struct VoteScreen: View {
         .navigationDestination(isPresented: $navigateToGame) {
              GameView()
         }
-        .onChange(of: gameState.currentPhase) { newPhase in
+        .onChange(of: gameState.currentPhase) { _, newPhase in
             if newPhase == .generatingStory {
                 navigateToGame = true
             }
