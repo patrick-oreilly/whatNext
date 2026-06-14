@@ -5,7 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
 import { PlayerStatus } from '../components/game/PlayerStatus';
-import { StoryDisplay } from '../components/game/StoryDisplay';
+import { GeneratingStoryPhase } from '../components/game/GeneratingStoryPhase';
+import { StoryMarkdown, markdownComponents } from '../components/game/StoryMarkdown';
 import { PlayerInput } from '../components/game/PlayerInput';
 import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
@@ -13,36 +14,15 @@ import { VotingTimer } from '../components/game/VotingTimer';
 import { Icon } from '../components/common/Icon';
 import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
-import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
+import { usePolling, useBackgroundMusic } from '../hooks';
 import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
-import { Dice5, Flag, Trophy } from 'lucide-react';
-
-/* -------------------------------------------------------------------------
-   Markdown component map – defined once outside the component
-   ------------------------------------------------------------------------- */
-const markdownComponents = {
-  p: ({ ...props }) => (
-    <p className="mb-4 text-accent-white font-semibold text-lg leading-relaxed" {...props} />
-  ),
-  strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-  em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
-  h1: ({ ...props }) => <h1 className="text-3xl font-black text-primary mb-4 uppercase" {...props} />,
-  h2: ({ ...props }) => <h2 className="text-2xl font-black text-primary mb-3 uppercase" {...props} />,
-  h3: ({ ...props }) => <h3 className="text-xl font-black text-primary mb-2 uppercase" {...props} />,
-  ul: ({ ...props }) => <ul className="list-disc list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-  ol: ({ ...props }) => <ol className="list-decimal list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-  li: ({ ...props }) => <li className="text-accent-white font-semibold" {...props} />,
-  blockquote: ({ ...props }) => (
-    <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />
-  ),
-};
+import { Dice5, Trophy } from 'lucide-react';
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { roomState, setRoomState, currentPlayer } = useGameStore();
-  const { streamedText, isStreaming, startStream } = useSSE();
 
   /* -----------------------------------------------------------------------
      ALL HOOKS — TOP LEVEL, BEFORE ANY RETURN
@@ -84,11 +64,9 @@ export const Game: React.FC = () => {
   const [hasVoted, setHasVoted] = useState(false);
   const [votingResults, setVotingResults] = useState<VotingResultsResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
   const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
   const [votingTimeoutSeconds, setVotingTimeoutSeconds] = useState<number>(60);
   const [timedOutPlayers, setTimedOutPlayers] = useState<string[]>([]);
-  const [showEndingPage, setShowEndingPage] = useState(false);
 
   // 4. Derived values (safe — after early returns)
   const currentInput = useMemo(
@@ -155,11 +133,6 @@ export const Game: React.FC = () => {
         setShowResults(false);
       }
 
-      if (state.turn !== roomState?.turn) {
-        setLastStreamedTurn(null);
-        setShowEndingPage(false);
-      }
-
       if (state.phase === GamePhase.VOTING && state.player_inputs.length) {
         const eligible = state.players.filter(p => !(state.timed_out_players ?? []).includes(p));
         const voters = new Set<string>();
@@ -202,27 +175,7 @@ export const Game: React.FC = () => {
     fetchRoomState();
   }, [fetchRoomState]);
 
-  // 9. SSE streaming
-  useEffect(() => {
-    if (
-      roomState?.phase === GamePhase.GENERATING_STORY &&
-      !isStreaming &&
-      roomId &&
-      roomState.turn !== lastStreamedTurn
-    ) {
-      startStream(roomId);
-      setLastStreamedTurn(roomState.turn);
-    }
-  }, [
-    roomState?.phase,
-    roomState?.turn,
-    roomId,
-    isStreaming,
-    lastStreamedTurn,
-    startStream,
-  ]);
-
-  // 10. Debug: Track phase changes
+  // 9. Debug: Track phase changes
   useEffect(() => {
     if (roomState) {
       console.log('🎭 [Game] COMPONENT STATE UPDATED - Current phase:', roomState.phase);
@@ -256,26 +209,6 @@ export const Game: React.FC = () => {
     currentDecisionData.decision,
     currentDecisionData.status,
   ]);
-
-  // 11. Detect when story has ended and show ending page
-  useEffect(() => {
-    // Check if backend flagged story as ended
-    if (roomState?.story_has_ended && roomState.phase === GamePhase.GENERATING_STORY) {
-      console.log('🏁 [Game] Story end detected via story_has_ended flag');
-      setShowEndingPage(true);
-      return;
-    }
-
-    // Check if last story segment has_story_ended flag
-    if (roomState?.story_history?.length && roomState.phase === GamePhase.GENERATING_STORY) {
-      const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-      if (lastSegment.content.has_story_ended) {
-        console.log('🏁 [Game] Story end detected in last story segment (structured data)');
-        setShowEndingPage(true);
-        return;
-      }
-    }
-  }, [isStreaming, streamedText, roomState?.story_has_ended, roomState?.story_history, roomState?.phase]);
 
   if (isLoading) {
     return (
@@ -347,13 +280,11 @@ export const Game: React.FC = () => {
     }
   };
 
-  const handleEndingPageContinue = async () => {
+  const handleEndGame = async () => {
     if (!roomId) return;
     try {
       console.log('🏁 Story has ended, calling endGame API to transition to GAME_OVER');
-      // Call API to properly end the game (set phase to GAME_OVER, close ADK session)
       await GameApi.endGame(roomId);
-      // Navigate to game over screen
       navigate(`/gameover/${roomId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to end game');
@@ -519,74 +450,11 @@ export const Game: React.FC = () => {
           <div className="lg:col-span-3">
             {/* GENERATING_STORY */}
             {roomState.phase === GamePhase.GENERATING_STORY && (
-              <div className="space-y-6">
-                <Card className="bg-accent-black border-4 border-accent-white">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-black text-primary uppercase tracking-tight mb-2">
-                      The Story So Far...
-                    </h2>
-                    <div className="h-1 w-20 bg-primary rounded"></div>
-                  </div>
-
-                  <StoryDisplay
-                    segments={roomState.story_history}
-                    streamingText={streamedText}
-                    isStreaming={isStreaming}
-                  />
-
-                  {showEndingPage && (
-                    <div className="mt-8 space-y-6">
-                      {/* Ending Page Display */}
-                      <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-primary">
-                        <Icon icon={Flag} size={72} className="mx-auto mb-4 text-primary" />
-                        <h3 className="text-4xl font-black text-accent-white uppercase mb-6">
-                          Thanks For Playing!
-                        </h3>
-                        <div className="bg-accent-black bg-opacity-50 p-6 rounded-lg mb-6">
-                          <div className="prose prose-invert prose-lg max-w-none">
-                            <ReactMarkdown
-                              components={{
-                                p: ({ ...props }) => <p className="text-accent-white font-semibold text-xl leading-relaxed mb-4" {...props} />,
-                                strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-                                em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
-                              }}
-                            >
-                              {(() => {
-                                // Get ending summary from structured backend data
-                                if (roomState?.story_history?.length) {
-                                  const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-                                  return lastSegment.content.ending_summary || 'The story has come to an end.';
-                                }
-                                return 'The story has come to an end.';
-                              })()}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                        <Button size="lg" onClick={handleEndingPageContinue} className="animate-pulse-glow">
-                          View Final Results
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isStreaming && !showEndingPage && streamedText && (
-                    <div className="mt-8 text-center">
-                      <Button size="lg" onClick={handleContinue} className="animate-pulse-glow">
-                        Continue
-                      </Button>
-                    </div>
-                  )}
-
-                  {isStreaming && (
-                    <div className="mt-6 text-center">
-                      <div className="inline-flex items-center space-x-3 text-primary font-black uppercase">
-                        <Spinner />
-                        <span>AI is creating the story...</span>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              </div>
+              <GeneratingStoryPhase
+                roomId={roomId!}
+                onContinue={handleContinue}
+                onEndGame={handleEndGame}
+              />
             )}
 
             {/* PLAYER_INPUT */}
@@ -601,9 +469,9 @@ export const Game: React.FC = () => {
 
                     {roomState.story_history.length > 0 && (
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
-                        <ReactMarkdown components={markdownComponents}>
+                        <StoryMarkdown>
                           {roomState.story_history[roomState.story_history.length - 1].content.paragraph}
-                        </ReactMarkdown>
+                        </StoryMarkdown>
                       </div>
                     )}
 
@@ -612,9 +480,8 @@ export const Game: React.FC = () => {
                     <div className="text-center mb-8 prose prose-invert prose-lg max-w-none">
                       <ReactMarkdown
                         components={{
+                          ...markdownComponents,
                           p: ({ ...props }) => <p className="text-2xl font-black text-accent-white uppercase tracking-wide" {...props} />,
-                          strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-                          em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
                         }}
                       >
                         {resolvedDecisionPrompt}
@@ -666,9 +533,8 @@ export const Game: React.FC = () => {
                         <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
                           <ReactMarkdown
                             components={{
+                              ...markdownComponents,
                               p: ({ ...props }) => <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide" {...props} />,
-                              strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-                              em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
                             }}
                           >
                             {`"${resolvedDecisionPrompt}"`}
