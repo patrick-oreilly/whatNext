@@ -83,7 +83,7 @@ const createStoryStream = (
         if (parsed.paragraph) {
           callbacks.onChunk(parsed.paragraph);
         }
-      } catch (e) {
+      } catch {
         // Ignore parsing errors, could be a partial message
       }
     }

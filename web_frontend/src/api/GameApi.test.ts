@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
 import { GameApi } from './GameApi';
+import { StoryLineType } from '../types/game';
 
 vi.mock('axios', () => {
   const mockAxiosInstance = {
@@ -41,7 +42,7 @@ describe('GameApi', () => {
       const mockResponse = { data: { room_id: 'ABC123', storyline: 'hoop_dreams', status: 'created' } };
       mockAxios.post.mockResolvedValueOnce(mockResponse);
 
-      const result = await GameApi.createRoom({ storyline: 'hoop_dreams' as any, max_turns: 10 });
+      const result = await GameApi.createRoom({ storyline: StoryLineType.HOOP_DREAMS, max_turns: 10 });
 
       expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/create', { storyline: 'hoop_dreams', max_turns: 10 });
       expect(result).toEqual(mockResponse.data);
@@ -207,10 +208,12 @@ describe('GameApi', () => {
         onerror: null,
         close: vi.fn(),
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (globalThis as any).EventSource = vi.fn(() => mockEventSource);
     });
-
+  
     afterEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (globalThis as any).EventSource;
     });
 
