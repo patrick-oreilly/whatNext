@@ -95,7 +95,7 @@ export const VotingPhase: React.FC = () => {
         await GameApi.triggerVotingTimeout(roomId);
         await fetchVotingResults();
       }
-    } catch (e) {
+    } catch {
       setError('An error occurred while handling voting timeout.');
     }
   };
