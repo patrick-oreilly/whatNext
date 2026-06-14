@@ -71,6 +71,8 @@ export interface RoomState {
   player_inputs: PlayerInput[];
   max_turns: number;
   input_phase_start_time?: string | null;
+  voting_phase_start_time?: string | null;
+  voting_timeout_seconds?: number | null;
   timed_out_players?: string[];
   story_has_ended?: boolean;
 }
