@@ -82,7 +82,6 @@ vi.mock('../common', () => ({
 
 describe('GeneratingStoryPhase', () => {
   const mockOnContinue = vi.fn();
-  const mockOnEndGame = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,7 +92,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
     expect(screen.getByText('The Story So Far...')).toBeDefined();
@@ -106,7 +104,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
@@ -118,7 +115,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
@@ -130,7 +126,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
@@ -149,7 +144,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
@@ -166,7 +160,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
@@ -187,7 +180,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
@@ -204,7 +196,6 @@ describe('GeneratingStoryPhase', () => {
       <GeneratingStoryPhase
         roomId="TEST123"
         onContinue={mockOnContinue}
-        onEndGame={mockOnEndGame}
       />
     );
 
