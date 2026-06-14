@@ -3,7 +3,7 @@ import json
 import random
 import re
 import asyncio
-from typing import Optional, Dict
+from typing import Dict
 from datetime import datetime
 
 from backend.core.models import (
@@ -105,7 +105,8 @@ class GameTurn:
                 "status": "started",
                 "room_id": room_id,
                 "turn": 1,
-                "phase": GamePhase.GENERATING_STORY
+                "phase": GamePhase.GENERATING_STORY,
+                "prompt": initial_message
             },
             phase=GamePhase.GENERATING_STORY
         )
@@ -521,13 +522,15 @@ class GameTurn:
     # process_llm_result
     # ------------------------------------------------------------------
 
-    def process_llm_result(self, room_id: str, llm_output: LlmOutput, winning_player: Optional[str] = None) -> TurnResult:
+    def process_llm_result(self, room_id: str, raw_text: str) -> TurnResult:
         room = self._get_room(room_id)
+
+        llm_output = self.parse_llm_response(raw_text)
 
         segment = StorySegment(
             turn=room.turn,
             content=llm_output,
-            winning_player=winning_player
+            winning_player=None
         )
         room.story_history.append(segment)
         room.next_prompt = None
@@ -539,6 +542,7 @@ class GameTurn:
             self._save_room(room)
             return TurnResult(
                 success=True,
+                directive=TurnDirective.DISPOSE_SESSION,
                 response={"status": "story_ending", "has_story_ended": True},
                 phase=room.phase
             )
