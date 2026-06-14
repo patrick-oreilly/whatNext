@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct Lobby: View {
-    let players = ["Patrick", "Aedan", "Eoin", "Dad", "Mom"]
-    @State private var value: Double = 10
+    @EnvironmentObject var gameState: GameStateManager
     @State private var isExpanded = false
+    @State private var navigateToGame = false
 
     var body: some View {
         ZStack {
@@ -41,7 +41,7 @@ struct Lobby: View {
                         .foregroundStyle(Color.white)
                         .padding(.bottom, -70)
                     
-                    Text("121 232")
+                    Text("\(gameState.roomId)")
                         .font(.system(size: 80))
                         .fontWeight(.heavy)
                         .foregroundStyle(Color.white)
@@ -104,7 +104,7 @@ struct Lobby: View {
                         GridItem(.fixed(100)),
                         GridItem(.fixed(100))
                     ], spacing: 20) {
-                        ForEach(players, id: \.self) { player in
+                        ForEach(gameState.players, id: \.self) { player in
                             VStack {
                                 Image(systemName: "person.fill")
                                     .resizable()
@@ -117,28 +117,56 @@ struct Lobby: View {
                         }
                     }
                     
-                    // Start button
-                    NavigationLink(destination: GameView()) {
-                        Text("START")
-                            .font(.system(size: 45))
-                            .fontWeight(.heavy)
-                            .foregroundStyle(Color.white)
-                            .padding(.horizontal, 30)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(lineWidth: 7)
-                                    .foregroundColor(Color.black)
-                                    .background(Color.black)
-                            )
-                            .frame(maxWidth: .infinity)
+                    // Start button - Only for Host
+                    if gameState.isHost {
+                        Button(action: {
+                            Task {
+                                await gameState.startGame()
+                            }
+                        }) {
+                            if gameState.isLoading {
+                                ProgressView().scaleEffect(1.5).padding()
+                            } else {
+                                Text("START")
+                                    .font(.system(size: 45))
+                                    .fontWeight(.heavy)
+                                    .foregroundStyle(Color.white)
+                                    .padding(.horizontal, 30)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(lineWidth: 7)
+                                            .foregroundColor(Color.black)
+                                            .background(Color.black)
+                                    )
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .disabled(gameState.isLoading)
+                        .padding(50)
+                    } else {
+                        Text("Waiting for host to start...")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(50)
                     }
-                    .padding(50)
                 }
             }
+        }
+        // Auto-navigate when game moves from Lobby to Generating Story phase
+        .onChange(of: gameState.currentPhase) { _, newPhase in
+            if newPhase == .generatingStory {
+                navigateToGame = true
+            }
+        }
+        .navigationDestination(isPresented: $navigateToGame) {
+            GameView()
         }
     }
 }
 
 #Preview {
-    Lobby()
+    NavigationView {
+        Lobby()
+            .environmentObject(GameStateManager())
+    }
 }

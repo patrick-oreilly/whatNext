@@ -227,4 +227,20 @@ class HealthResponse(BaseModel):
     active_rooms: int
     timestamp: datetime = Field(default_factory=datetime.now)
 
+
+class TurnDirective(str, Enum):
+    """Directives returned by GameTurn methods for the API layer to execute"""
+    NONE = "none"
+    DISPOSE_SESSION = "dispose_session"
+    CREATE_SESSION = "create_session"
+
+
+class TurnResult(BaseModel):
+    """Result of a game turn operation with directives for the API layer"""
+    success: bool = True
+    directive: TurnDirective = TurnDirective.NONE
+    response: dict = {}
+    phase: Optional[GamePhase] = None
+    error: Optional[str] = None
+
     

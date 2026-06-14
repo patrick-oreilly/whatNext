@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Input } from '../components/common';
-import { roomsApi } from '../api/rooms';
+import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
 import { useLocalStorage } from '../hooks';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -43,7 +43,7 @@ export const JoinRoom: React.FC = () => {
       const formattedCode = formatRoomCode(roomCode.trim());
 
       // Join room
-      await roomsApi.joinRoom({
+      await GameApi.joinRoom({
         room_id: formattedCode,
         player_name: playerName.trim(),
       });

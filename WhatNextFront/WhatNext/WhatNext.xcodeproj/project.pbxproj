@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1ED54AFEA829EEF022132554 /* SSEStreamManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F348998B572CA1FA2D9C5F /* SSEStreamManager.swift */; };
+		226D4AAB852E3A68C3B7766D /* GameStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A854CD7B10564EAA2DF5C19 /* GameStateManager.swift */; };
+		29984D328F4E7D5072434684 /* GameTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA6418EA1B1F07D805D1AF9 /* GameTypes.swift */; };
+		4DE14F47BC26EA085F635082 /* APIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D5F41BDB839DAB294AD7567 /* APIModels.swift */; };
+		D11C46BC8E86D43D0355A396 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF9463A80B58665A3F2D910 /* APIService.swift */; };
+		E5AC49CD945B5423622485A5 /* DataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15B4B5A8716B482A4636340 /* DataModels.swift */; };
 		EADBE96B2EAE1B270025FADF /* WhatNextApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE96A2EAE1B270025FADF /* WhatNextApp.swift */; };
 		EADBE96F2EAE1B290025FADF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EADBE96E2EAE1B290025FADF /* Assets.xcassets */; };
 		EADBE9732EAE1B290025FADF /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EADBE9722EAE1B290025FADF /* Preview Assets.xcassets */; };
@@ -16,11 +22,16 @@
 		EADBE9822EAE4DB60025FADF /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9812EAE4DB60025FADF /* GameView.swift */; };
 		EADBE9842EAE57290025FADF /* PromptScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9832EAE57290025FADF /* PromptScreen.swift */; };
 		EADBE9862EAE5C1F0025FADF /* VoteScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9852EAE5C1F0025FADF /* VoteScreen.swift */; };
-		EADBE9882EAFC91A0025FADF /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9872EAFC91A0025FADF /* GameViewModel.swift */; };
 		EADBE98A2EB27B590025FADF /* GameChoices.swift in Sources */ = {isa = PBXBuildFile; fileRef = EADBE9892EB27B590025FADF /* GameChoices.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		5AA6418EA1B1F07D805D1AF9 /* GameTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GameTypes.swift; path = WhatNext/Models/GameTypes.swift; sourceTree = SOURCE_ROOT; };
+		6A854CD7B10564EAA2DF5C19 /* GameStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GameStateManager.swift; path = WhatNext/ViewModels/GameStateManager.swift; sourceTree = SOURCE_ROOT; };
+		6CF9463A80B58665A3F2D910 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIService.swift; path = WhatNext/Services/APIService.swift; sourceTree = SOURCE_ROOT; };
+		7D5F41BDB839DAB294AD7567 /* APIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIModels.swift; path = WhatNext/Models/APIModels.swift; sourceTree = SOURCE_ROOT; };
+		A15B4B5A8716B482A4636340 /* DataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DataModels.swift; path = WhatNext/Models/DataModels.swift; sourceTree = SOURCE_ROOT; };
+		B4F348998B572CA1FA2D9C5F /* SSEStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SSEStreamManager.swift; path = WhatNext/Services/SSEStreamManager.swift; sourceTree = SOURCE_ROOT; };
 		EADBE9672EAE1B270025FADF /* WhatNext.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WhatNext.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EADBE96A2EAE1B270025FADF /* WhatNextApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatNextApp.swift; sourceTree = "<group>"; };
 		EADBE96C2EAE1B270025FADF /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -32,7 +43,6 @@
 		EADBE9812EAE4DB60025FADF /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
 		EADBE9832EAE57290025FADF /* PromptScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptScreen.swift; sourceTree = "<group>"; };
 		EADBE9852EAE5C1F0025FADF /* VoteScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteScreen.swift; sourceTree = "<group>"; };
-		EADBE9872EAFC91A0025FADF /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
 		EADBE9892EB27B590025FADF /* GameChoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameChoices.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -52,6 +62,12 @@
 			children = (
 				EADBE9692EAE1B270025FADF /* WhatNext */,
 				EADBE9682EAE1B270025FADF /* Products */,
+				A15B4B5A8716B482A4636340 /* DataModels.swift */,
+				5AA6418EA1B1F07D805D1AF9 /* GameTypes.swift */,
+				7D5F41BDB839DAB294AD7567 /* APIModels.swift */,
+				6A854CD7B10564EAA2DF5C19 /* GameStateManager.swift */,
+				6CF9463A80B58665A3F2D910 /* APIService.swift */,
+				B4F348998B572CA1FA2D9C5F /* SSEStreamManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -100,7 +116,6 @@
 				EADBE9812EAE4DB60025FADF /* GameView.swift */,
 				EADBE9832EAE57290025FADF /* PromptScreen.swift */,
 				EADBE9852EAE5C1F0025FADF /* VoteScreen.swift */,
-				EADBE9872EAFC91A0025FADF /* GameViewModel.swift */,
 				EADBE9892EB27B590025FADF /* GameChoices.swift */,
 			);
 			path = GamePage;
@@ -181,10 +196,15 @@
 				EADBE97B2EAE20FD0025FADF /* ContentView.swift in Sources */,
 				EADBE96B2EAE1B270025FADF /* WhatNextApp.swift in Sources */,
 				EADBE9862EAE5C1F0025FADF /* VoteScreen.swift in Sources */,
-				EADBE9882EAFC91A0025FADF /* GameViewModel.swift in Sources */,
 				EADBE9842EAE57290025FADF /* PromptScreen.swift in Sources */,
 				EADBE97D2EAE21E50025FADF /* Lobby.swift in Sources */,
 				EADBE9822EAE4DB60025FADF /* GameView.swift in Sources */,
+				E5AC49CD945B5423622485A5 /* DataModels.swift in Sources */,
+				29984D328F4E7D5072434684 /* GameTypes.swift in Sources */,
+				4DE14F47BC26EA085F635082 /* APIModels.swift in Sources */,
+				226D4AAB852E3A68C3B7766D /* GameStateManager.swift in Sources */,
+				D11C46BC8E86D43D0355A396 /* APIService.swift in Sources */,
+				1ED54AFEA829EEF022132554 /* SSEStreamManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +336,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"WhatNext/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WhatNext/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -352,6 +373,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"WhatNext/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WhatNext/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
