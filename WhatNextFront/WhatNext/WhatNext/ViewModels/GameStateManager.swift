@@ -43,20 +43,21 @@ class GameStateManager: ObservableObject {
     
     // MARK: - Room Management API
     
-    func createRoom(storyline: StorylineType, name: String) async {
+    func createRoom(storyline: StorylineType, name: String) async throws {
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             let response = try await api.createRoom(storyline: storyline)
             self.roomId = response.roomId
             self.activeStoryline = storyline
             self.isHost = true
-            
+
             // Auto-join the creator
             try await joinGame(roomId: self.roomId, name: name)
         } catch {
             errorMessage = error.localizedDescription
+            throw error // Re-throw so the view can gate navigation
         }
     }
     
