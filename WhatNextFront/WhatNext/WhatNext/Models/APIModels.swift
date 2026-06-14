@@ -29,6 +29,16 @@ struct ErrorResponse: Codable {
     let details: String?
 }
 
+// Response from POST /api/turn/advance/{room_id}. The endpoint returns a small
+// status payload (not a full RoomState), and the shape varies by outcome
+// (turn_advanced / game_over / noop), so every field beyond status is optional.
+struct TurnAdvanceResponse: Codable {
+    let status: String
+    let turn: Int?
+    let phase: GamePhase?
+    let finalScores: [String: Int]?
+}
+
 struct HealthResponse: Codable {
     let status: String
     let apiConfigured: Bool

@@ -150,7 +150,7 @@ class APIService {
         return try await performRequest(endpoint: "/voting/cast", method: "POST", body: data)
     }
     
-    func advanceTurn(roomId: String) async throws -> RoomStateResponse {
+    func advanceTurn(roomId: String) async throws -> TurnAdvanceResponse {
         return try await performRequest(endpoint: "/turn/advance/\(roomId)", method: "POST")
     }
     

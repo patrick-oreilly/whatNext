@@ -194,13 +194,45 @@ class GameStateManager: ObservableObject {
     func castVote(for chosenPlayerName: String) async {
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             let state = try await api.castVote(roomId: roomId, voter: playerName, chosenPlayer: chosenPlayerName)
             updateLocalState(with: state)
-            
-            // If voting finishes after this vote, the phase transitions. 
+
+            // If voting finishes after this vote, the phase transitions.
             // The polling loop handles the UI update to the winner.
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// True once every player has cast a vote in the current voting round.
+    /// Drives the host-only "NEXT TURN" button so the round can be advanced.
+    var allPlayersVoted: Bool {
+        guard currentPhase == .voting, !players.isEmpty else { return false }
+        let voters = Set(currentSubmissions.flatMap { $0.voters })
+        return players.allSatisfy { voters.contains($0) }
+    }
+
+    func advanceTurn() async {
+        guard isHost else { return }
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let result = try await api.advanceTurn(roomId: roomId)
+
+            if result.status == "game_over" {
+                // Final turn reached — clean phase transition (full results screen TBD).
+                self.currentPhase = .gameOver
+                stopPolling()
+            } else {
+                // The advance endpoint returns a status payload, not full room state,
+                // so refresh explicitly; this flips phase to generating_story and the
+                // existing handlePhaseTransition reconnects the SSE stream.
+                let state = try await api.getRoomState(roomId: roomId)
+                updateLocalState(with: state)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

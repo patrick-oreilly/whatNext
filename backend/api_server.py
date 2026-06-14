@@ -468,6 +468,20 @@ async def advance_turn(room_id: str):
     """
     room = room_manager.get_room(room_id)
 
+    # Idempotency guard (defense-in-depth): if the turn has already been advanced
+    # (phase moved past voting into generation or game over), ignore duplicate calls
+    # so a double-fire from any client can never double-increment / skip a turn.
+    if room.phase in (GamePhase.GENERATING_STORY, GamePhase.GAME_OVER):
+        logger.warning(
+            f"advance_turn ignored for room {room_id}: "
+            f"turn already advanced (phase={room.phase})"
+        )
+        return {
+            "status": "noop_already_advanced",
+            "turn": room.turn,
+            "phase": room.phase,
+        }
+
     # Check if story has already ended - if so, go to GAME_OVER instead
     if room.story_has_ended:
         logger.info(f"🏁 Story already ended in room {room_id}, transitioning to GAME_OVER")

@@ -12,6 +12,7 @@ struct VoteScreen: View {
     @State private var selectedPlayerName = ""
     @State private var navigateToGame = false
     @State private var hasVoted = false
+    @State private var showGameOver = false
     
     var body: some View {
         ZStack {
@@ -55,10 +56,40 @@ struct VoteScreen: View {
                         .multilineTextAlignment(.center)
                     
                     if hasVoted {
-                        Text("Waiting for others to finish voting...")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
+                        // Vote submitted — wait for the round to resolve, then the host advances.
+                        if gameState.allPlayersVoted {
+                            if gameState.isHost {
+                                Button(action: { Task { await gameState.advanceTurn() } }) {
+                                    if gameState.isLoading {
+                                        ProgressView().scaleEffect(1.5).padding()
+                                    } else {
+                                        Text("NEXT TURN")
+                                            .font(.system(size: 30))
+                                            .fontWeight(.heavy)
+                                            .foregroundStyle(Color.white)
+                                            .padding(.vertical, 5)
+                                            .padding(.horizontal, 30)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 15)
+                                                    .foregroundColor(Color.black)
+                                            )
+                                            .frame(maxWidth: .infinity)
+                                    }
+                                }
+                                .disabled(gameState.isLoading)
+                                .padding(.horizontal, 30)
+                            } else {
+                                Text("Waiting for host to continue...")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                            }
+                        } else {
+                            Text("Waiting for others to finish voting...")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                        }
                     } else {
                         ScrollView(){
                             VStack(spacing: 20){
@@ -82,32 +113,32 @@ struct VoteScreen: View {
                                 }
                             }
                         }
-                    }
-                    
-                    Button(action: {
-                        Task {
-                            await gameState.castVote(for: selectedPlayerName)
-                            hasVoted = true
+
+                        Button(action: {
+                            Task {
+                                await gameState.castVote(for: selectedPlayerName)
+                                hasVoted = true
+                            }
+                        }) {
+                            if gameState.isLoading {
+                                ProgressView().scaleEffect(1.5).padding()
+                            } else {
+                                Text("CONFIRM")
+                                    .font(.system(size: 30))
+                                    .fontWeight(.heavy)
+                                    .foregroundStyle(Color.white)
+                                    .padding(.vertical, 5)
+                                    .padding(.horizontal, 30)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 15)
+                                            .foregroundColor(Color.black)
+                                    )
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
-                    }) {
-                        if gameState.isLoading && !hasVoted {
-                            ProgressView().scaleEffect(1.5).padding()
-                        } else {
-                            Text("CONFIRM")
-                                .font(.system(size: 30))
-                                .fontWeight(.heavy)
-                                .foregroundStyle(Color.white)
-                                .padding(.vertical, 5)
-                                .padding(.horizontal, 30)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .foregroundColor(Color.black)
-                                )
-                                .frame(maxWidth: .infinity)
-                        }
+                        .disabled(selectedPlayerName.isEmpty || gameState.isLoading)
+                        .opacity(selectedPlayerName.isEmpty ? 0.5 : 1.0)
                     }
-                    .disabled(selectedPlayerName.isEmpty || hasVoted || gameState.isLoading)
-                    .opacity(selectedPlayerName.isEmpty || hasVoted ? 0.5 : 1.0)
                                         
                     HStack{
                         ForEach(gameState.players, id: \.self) { player in
@@ -150,8 +181,40 @@ struct VoteScreen: View {
         .onChange(of: gameState.currentPhase) { _, newPhase in
             if newPhase == .generatingStory {
                 navigateToGame = true
+            } else if newPhase == .gameOver {
+                showGameOver = true
             }
         }
+        .navigationDestination(isPresented: $showGameOver) {
+            GameOverPlaceholder(scores: gameState.scores)
+        }
+    }
+}
+
+private struct GameOverPlaceholder: View {
+    let scores: [String: Int]
+    var body: some View {
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]),
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            VStack(spacing: 16) {
+                Text("GAME OVER")
+                    .font(.system(size: 50))
+                    .fontWeight(.heavy)
+                    .foregroundStyle(.white)
+                Text("Temporary placeholder — full results screen TBD")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                ForEach(scores.sorted { $0.value > $1.value }, id: \.key) { name, score in
+                    Text("\(name): \(score)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                }
+            }
+        }
+        .navigationBarBackButtonHidden(true)
     }
 }
 
