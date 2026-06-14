@@ -310,21 +310,23 @@ async def stream_story(room_id: str):
 
             logger.info(f"Complete response received (length={len(full_response)})")
 
-            llm_output = GameTurn.parse_llm_response(full_response)
+            result = game_turn.process_llm_result(room_id, full_response)
 
-            paragraph_text = llm_output.paragraph
-            chunk_size = 15
-            for i in range(0, len(paragraph_text), chunk_size):
-                chunk = paragraph_text[i:i + chunk_size]
-                paragraph_chunks.append(chunk)
-                yield f"data: {chunk}\n\n"
-                await asyncio.sleep(0.02)
+            room = room_manager.get_room(room_id)
+            if room.story_history:
+                paragraph_text = room.story_history[-1].content.paragraph
+                chunk_size = 15
+                for i in range(0, len(paragraph_text), chunk_size):
+                    chunk = paragraph_text[i:i + chunk_size]
+                    paragraph_chunks.append(chunk)
+                    yield f"data: {chunk}\n\n"
+                    await asyncio.sleep(0.02)
 
             async with active_streams_lock:
                 if stream_key in active_streams:
                     active_streams[stream_key]["response"] = paragraph_chunks
 
-            result = game_turn.process_llm_result(room_id, llm_output)
+            _consume_directives(result, room_id)
 
             yield "data: [DONE]\n\n"
 

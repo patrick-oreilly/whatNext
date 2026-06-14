@@ -303,16 +303,11 @@ class TestProcessLlmResult:
         room.phase = GamePhase.GENERATING_STORY
         room_manager.save_room(room)
 
-        llm_output = LlmOutput(
-            paragraph="The final buzzer sounds.",
-            status=None,
-            decision=None,
-            has_story_ended=True,
-            ending_summary="You won it all."
-        )
+        raw_text = '{"paragraph": "The final buzzer sounds.", "status": null, "decision": null, "has_story_ended": true, "ending_summary": "You won it all."}'
 
-        result = game_turn.process_llm_result(populated_room, llm_output)
+        result = game_turn.process_llm_result(populated_room, raw_text)
         assert result.response["has_story_ended"] is True
+        assert result.directive == TurnDirective.DISPOSE_SESSION
 
         room = room_manager.get_room(populated_room)
         assert room.story_has_ended is True
@@ -324,14 +319,9 @@ class TestProcessLlmResult:
         room.phase = GamePhase.GENERATING_STORY
         room_manager.save_room(room)
 
-        llm_output = LlmOutput(
-            paragraph="You drive to the basket.",
-            status="Momentum",
-            decision="Shoot or pass?",
-            has_story_ended=False
-        )
+        raw_text = '{"paragraph": "You drive to the basket.", "status": "Momentum", "decision": "Shoot or pass?", "has_story_ended": false}'
 
-        result = game_turn.process_llm_result(populated_room, llm_output)
+        result = game_turn.process_llm_result(populated_room, raw_text)
         assert result.phase == GamePhase.PLAYER_INPUT
 
         room = room_manager.get_room(populated_room)
@@ -496,13 +486,8 @@ class TestFullTurnLoop:
         assert room.turn == 1
 
         # Simulate LLM streaming completion (turn 1 - opening)
-        llm_output_1 = LlmOutput(
-            paragraph="The game begins! You step onto the court.",
-            status="Opening tip",
-            decision="Offense or defense?",
-            has_story_ended=False
-        )
-        result = game_turn.process_llm_result(populated_room, llm_output_1)
+        raw_text_1 = '{"paragraph": "The game begins! You step onto the court.", "status": "Opening tip", "decision": "Offense or defense?", "has_story_ended": false}'
+        result = game_turn.process_llm_result(populated_room, raw_text_1)
         assert result.phase == GamePhase.PLAYER_INPUT
         room = room_manager.get_room(populated_room)
         assert room.phase == GamePhase.PLAYER_INPUT
@@ -526,13 +511,8 @@ class TestFullTurnLoop:
         assert room.phase == GamePhase.GENERATING_STORY
 
         # Simulate LLM for turn 2
-        llm_output_2 = LlmOutput(
-            paragraph="Alice drives and kicks to Bob for the open shot!",
-            status="Great teamwork",
-            decision="Keep pushing?",
-            has_story_ended=False
-        )
-        result = game_turn.process_llm_result(populated_room, llm_output_2)
+        raw_text_2 = '{"paragraph": "Alice drives and kicks to Bob for the open shot!", "status": "Great teamwork", "decision": "Keep pushing?", "has_story_ended": false}'
+        result = game_turn.process_llm_result(populated_room, raw_text_2)
         assert result.phase == GamePhase.PLAYER_INPUT
         room = room_manager.get_room(populated_room)
         assert room.turn == 2
@@ -546,13 +526,7 @@ class TestFullTurnLoop:
         room.phase = GamePhase.GENERATING_STORY
         room_manager.save_room(room)
 
-        llm_output_final = LlmOutput(
-            paragraph="The final buzzer sounds! Championship won!",
-            status=None,
-            decision=None,
-            has_story_ended=True,
-            ending_summary="An incredible season ends in glory."
-        )
+        llm_output_final = '{"paragraph": "The final buzzer sounds! Championship won!", "status": null, "decision": null, "has_story_ended": true, "ending_summary": "An incredible season ends in glory."}'
         result = game_turn.process_llm_result(populated_room, llm_output_final)
         assert result.response["has_story_ended"] is True
         room = room_manager.get_room(populated_room)
@@ -573,13 +547,7 @@ class TestFullTurnLoop:
         room.phase = GamePhase.GENERATING_STORY
         room_manager.save_room(room)
 
-        llm_output = LlmOutput(
-            paragraph="The story concludes.",
-            status=None,
-            decision=None,
-            has_story_ended=True,
-            ending_summary="All done."
-        )
+        llm_output = '{"paragraph": "The story concludes.", "status": null, "decision": null, "has_story_ended": true, "ending_summary": "All done."}'
         result = game_turn.process_llm_result(populated_room, llm_output)
         assert result.response["has_story_ended"] is True
 
