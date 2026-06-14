@@ -5,44 +5,25 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Button, Card, Spinner } from '../components/common';
 import { PlayerStatus } from '../components/game/PlayerStatus';
-import { StoryDisplay } from '../components/game/StoryDisplay';
-import { PlayerInput } from '../components/game/PlayerInput';
+import { GeneratingStoryPhase } from '../components/game/GeneratingStoryPhase';
+import { StoryMarkdown } from '../components/game/StoryMarkdown';
+import { markdownComponents } from '../components/game/markdownComponents.tsx';
+import { PlayerInputPhase } from '../components/game/PlayerInputPhase';
 import { VotingPanel } from '../components/game/VotingPanel';
 import { StatusDisplay } from '../components/game/StatusDisplay';
 import { VotingTimer } from '../components/game/VotingTimer';
 import { Icon } from '../components/common/Icon';
 import { GameApi } from '../api/GameApi';
 import { useGameStore } from '../store/gameStore';
-import { useSSE, usePolling, useBackgroundMusic } from '../hooks';
+import { usePolling, useBackgroundMusic } from '../hooks';
 import { GamePhase, StoryLineType, type VotingResultsResponse } from '../types';
 import { GAME_STATE_POLL_INTERVAL } from '../utils/constants';
-import { Dice5, Flag, Trophy } from 'lucide-react';
-
-/* -------------------------------------------------------------------------
-   Markdown component map – defined once outside the component
-   ------------------------------------------------------------------------- */
-const markdownComponents = {
-  p: ({ ...props }) => (
-    <p className="mb-4 text-accent-white font-semibold text-lg leading-relaxed" {...props} />
-  ),
-  strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-  em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
-  h1: ({ ...props }) => <h1 className="text-3xl font-black text-primary mb-4 uppercase" {...props} />,
-  h2: ({ ...props }) => <h2 className="text-2xl font-black text-primary mb-3 uppercase" {...props} />,
-  h3: ({ ...props }) => <h3 className="text-xl font-black text-primary mb-2 uppercase" {...props} />,
-  ul: ({ ...props }) => <ul className="list-disc list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-  ol: ({ ...props }) => <ol className="list-decimal list-inside mb-4 space-y-2 text-accent-white" {...props} />,
-  li: ({ ...props }) => <li className="text-accent-white font-semibold" {...props} />,
-  blockquote: ({ ...props }) => (
-    <blockquote className="border-l-4 border-primary pl-4 italic text-accent-white font-semibold" {...props} />
-  ),
-};
+import { Dice5, Trophy } from 'lucide-react';
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { roomState, setRoomState, currentPlayer } = useGameStore();
-  const { streamedText, isStreaming, startStream } = useSSE();
 
   /* -----------------------------------------------------------------------
      ALL HOOKS — TOP LEVEL, BEFORE ANY RETURN
@@ -84,18 +65,10 @@ export const Game: React.FC = () => {
   const [hasVoted, setHasVoted] = useState(false);
   const [votingResults, setVotingResults] = useState<VotingResultsResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [lastStreamedTurn, setLastStreamedTurn] = useState<number | null>(null);
-  const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
   const [votingTimeoutSeconds, setVotingTimeoutSeconds] = useState<number>(60);
-  const [timedOutPlayers, setTimedOutPlayers] = useState<string[]>([]);
-  const [showEndingPage, setShowEndingPage] = useState(false);
+  const [timerStartTime, setTimerStartTime] = useState<string | null>(null);
 
   // 4. Derived values (safe — after early returns)
-  const currentInput = useMemo(
-    () => roomState?.player_inputs.find(i => i.player_name === currentPlayer),
-    [roomState?.player_inputs, currentPlayer]
-  );
-  const hasSubmitted = !!currentInput;
 
   // 5. fetchVotingResults
   const fetchVotingResults = useCallback(async () => {
@@ -127,14 +100,6 @@ export const Game: React.FC = () => {
       setRoomState(state);
       console.log('✅ [fetchRoomState] React state updated');
 
-      if (state.phase === GamePhase.PLAYER_INPUT) {
-        console.log('⏱️ [Game] Setting up PLAYER_INPUT phase timer');
-        console.log('⏱️ [Game] input_phase_start_time from backend:', state.input_phase_start_time);
-        console.log('⏱️ [Game] timed_out_players from backend:', state.timed_out_players);
-        setTimerStartTime(state.input_phase_start_time ?? null);
-        setTimedOutPlayers(state.timed_out_players ?? []);
-      }
-
       if (state.phase === GamePhase.GAME_OVER) {
         navigate(`/gameover/${roomId}`);
         return;
@@ -153,11 +118,6 @@ export const Game: React.FC = () => {
         setHasVoted(false);
         setVotingResults(null);
         setShowResults(false);
-      }
-
-      if (state.turn !== roomState?.turn) {
-        setLastStreamedTurn(null);
-        setShowEndingPage(false);
       }
 
       if (state.phase === GamePhase.VOTING && state.player_inputs.length) {
@@ -202,27 +162,7 @@ export const Game: React.FC = () => {
     fetchRoomState();
   }, [fetchRoomState]);
 
-  // 9. SSE streaming
-  useEffect(() => {
-    if (
-      roomState?.phase === GamePhase.GENERATING_STORY &&
-      !isStreaming &&
-      roomId &&
-      roomState.turn !== lastStreamedTurn
-    ) {
-      startStream(roomId);
-      setLastStreamedTurn(roomState.turn);
-    }
-  }, [
-    roomState?.phase,
-    roomState?.turn,
-    roomId,
-    isStreaming,
-    lastStreamedTurn,
-    startStream,
-  ]);
-
-  // 10. Debug: Track phase changes
+  // 9. Debug: Track phase changes
   useEffect(() => {
     if (roomState) {
       console.log('🎭 [Game] COMPONENT STATE UPDATED - Current phase:', roomState.phase);
@@ -257,26 +197,6 @@ export const Game: React.FC = () => {
     currentDecisionData.status,
   ]);
 
-  // 11. Detect when story has ended and show ending page
-  useEffect(() => {
-    // Check if backend flagged story as ended
-    if (roomState?.story_has_ended && roomState.phase === GamePhase.GENERATING_STORY) {
-      console.log('🏁 [Game] Story end detected via story_has_ended flag');
-      setShowEndingPage(true);
-      return;
-    }
-
-    // Check if last story segment has_story_ended flag
-    if (roomState?.story_history?.length && roomState.phase === GamePhase.GENERATING_STORY) {
-      const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-      if (lastSegment.content.has_story_ended) {
-        console.log('🏁 [Game] Story end detected in last story segment (structured data)');
-        setShowEndingPage(true);
-        return;
-      }
-    }
-  }, [isStreaming, streamedText, roomState?.story_has_ended, roomState?.story_history, roomState?.phase]);
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -305,16 +225,6 @@ export const Game: React.FC = () => {
   /* -----------------------------------------------------------------------
      Handlers (after hooks)
      ----------------------------------------------------------------------- */
-  const handleSubmitInput = async (text: string) => {
-    if (!roomId || !currentPlayer) return;
-    await GameApi.submitInput({
-      room_id: roomId,
-      player_name: currentPlayer,
-      input_text: text,
-    });
-    await fetchRoomState();
-  };
-
   const handleVote = async (chosenPlayer: string) => {
     if (!roomId || !currentPlayer) return;
     await GameApi.castVote({
@@ -347,93 +257,14 @@ export const Game: React.FC = () => {
     }
   };
 
-  const handleEndingPageContinue = async () => {
+  const handleEndGame = async () => {
     if (!roomId) return;
     try {
       console.log('🏁 Story has ended, calling endGame API to transition to GAME_OVER');
-      // Call API to properly end the game (set phase to GAME_OVER, close ADK session)
       await GameApi.endGame(roomId);
-      // Navigate to game over screen
       navigate(`/gameover/${roomId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to end game');
-    }
-  };
-
-  const handleInputTimeout = async (currentInput: string) => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('⏰ [Game] Input timeout triggered!');
-    console.log('⏰ [Game] Draft input received (NOT submitting):', currentInput);
-    console.log('⏰ [Game] Draft length:', currentInput.length);
-    console.log('⏰ [Game] Policy: No auto-submit on timeout - draft discarded');
-    console.log('⏰ [Game] Room ID:', roomId);
-    console.log('⏰ [Game] Current Player:', currentPlayer);
-    console.log('═══════════════════════════════════════════════════════');
-
-    if (!roomId || !currentPlayer) {
-      console.error('❌ [Game] Missing roomId or currentPlayer, aborting timeout handler');
-      return;
-    }
-
-    // Check if already submitted manually (before timeout)
-    console.log('🔍 [Game] Checking if player already submitted manually...');
-    const alreadySubmitted = roomState.player_inputs.some(i => i.player_name === currentPlayer);
-    console.log('🔍 [Game] Already submitted?', alreadySubmitted);
-
-    if (alreadySubmitted) {
-      console.log('✓ [Game] Player already submitted manually, no action needed');
-
-      // Check current phase before calling timeout handler
-      await fetchRoomState();
-      const updatedRoom = await GameApi.getRoomState(roomId);
-
-      if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
-        console.log('📞 [Game] Calling backend timeout handler...');
-        try {
-          await GameApi.triggerInputTimeout(roomId);
-          console.log('✅ [Game] Backend timeout handler completed');
-        } catch (e) {
-          console.error('❌ [Game] Failed to trigger timeout:', e);
-        }
-        await fetchRoomState();
-      } else {
-        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
-      }
-      return;
-    }
-
-    console.log('⏰ [Game] Player did NOT submit manually - timing out without submission');
-    console.log('⏰ [Game] Draft discarded (length:', currentInput.length, ')');
-
-    try {
-      // Check current phase before calling timeout
-      console.log('🔄 [Game] Checking current phase before timeout call...');
-      await fetchRoomState();
-      const updatedRoom = await GameApi.getRoomState(roomId);
-      console.log('📊 [Game] Current phase:', updatedRoom.phase);
-
-      // Only call timeout handler if still in PLAYER_INPUT phase
-      if (updatedRoom.phase === GamePhase.PLAYER_INPUT) {
-        console.log('📞 [Game] Phase is PLAYER_INPUT, calling timeout handler to mark player as timed out...');
-        await GameApi.triggerInputTimeout(roomId);
-        console.log('✅ [Game] Timeout handler called - player marked as timed out');
-
-        // Refresh state after timeout
-        console.log('🔄 [Game] Fetching updated state...');
-        await fetchRoomState();
-        console.log('✅ [Game] State refreshed');
-      } else {
-        console.log('⏩ [Game] Phase already advanced to', updatedRoom.phase);
-        console.log('⏩ [Game] Another player already triggered timeout, no action needed');
-        await fetchRoomState();
-      }
-
-    } catch (e) {
-      console.error('═══════════════════════════════════════════════════════');
-      console.error('❌ [Game] TIMEOUT HANDLING ERROR!');
-      console.error('❌ [Game] Error:', e);
-      console.error('═══════════════════════════════════════════════════════');
-      setError('An error occurred while handling the timeout.');
     }
   };
 
@@ -519,74 +350,11 @@ export const Game: React.FC = () => {
           <div className="lg:col-span-3">
             {/* GENERATING_STORY */}
             {roomState.phase === GamePhase.GENERATING_STORY && (
-              <div className="space-y-6">
-                <Card className="bg-accent-black border-4 border-accent-white">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-black text-primary uppercase tracking-tight mb-2">
-                      The Story So Far...
-                    </h2>
-                    <div className="h-1 w-20 bg-primary rounded"></div>
-                  </div>
-
-                  <StoryDisplay
-                    segments={roomState.story_history}
-                    streamingText={streamedText}
-                    isStreaming={isStreaming}
-                  />
-
-                  {showEndingPage && (
-                    <div className="mt-8 space-y-6">
-                      {/* Ending Page Display */}
-                      <div className="bg-gradient-intense p-8 rounded-lg text-center border-4 border-primary">
-                        <Icon icon={Flag} size={72} className="mx-auto mb-4 text-primary" />
-                        <h3 className="text-4xl font-black text-accent-white uppercase mb-6">
-                          Thanks For Playing!
-                        </h3>
-                        <div className="bg-accent-black bg-opacity-50 p-6 rounded-lg mb-6">
-                          <div className="prose prose-invert prose-lg max-w-none">
-                            <ReactMarkdown
-                              components={{
-                                p: ({ ...props }) => <p className="text-accent-white font-semibold text-xl leading-relaxed mb-4" {...props} />,
-                                strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-                                em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
-                              }}
-                            >
-                              {(() => {
-                                // Get ending summary from structured backend data
-                                if (roomState?.story_history?.length) {
-                                  const lastSegment = roomState.story_history[roomState.story_history.length - 1];
-                                  return lastSegment.content.ending_summary || 'The story has come to an end.';
-                                }
-                                return 'The story has come to an end.';
-                              })()}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                        <Button size="lg" onClick={handleEndingPageContinue} className="animate-pulse-glow">
-                          View Final Results
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isStreaming && !showEndingPage && streamedText && (
-                    <div className="mt-8 text-center">
-                      <Button size="lg" onClick={handleContinue} className="animate-pulse-glow">
-                        Continue
-                      </Button>
-                    </div>
-                  )}
-
-                  {isStreaming && (
-                    <div className="mt-6 text-center">
-                      <div className="inline-flex items-center space-x-3 text-primary font-black uppercase">
-                        <Spinner />
-                        <span>AI is creating the story...</span>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              </div>
+              <GeneratingStoryPhase
+                roomId={roomId!}
+                onContinue={handleContinue}
+                onEndGame={handleEndGame}
+              />
             )}
 
             {/* PLAYER_INPUT */}
@@ -601,9 +369,9 @@ export const Game: React.FC = () => {
 
                     {roomState.story_history.length > 0 && (
                       <div className="bg-accent-white bg-opacity-10 p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
-                        <ReactMarkdown components={markdownComponents}>
+                        <StoryMarkdown>
                           {roomState.story_history[roomState.story_history.length - 1].content.paragraph}
-                        </ReactMarkdown>
+                        </StoryMarkdown>
                       </div>
                     )}
 
@@ -612,32 +380,24 @@ export const Game: React.FC = () => {
                     <div className="text-center mb-8 prose prose-invert prose-lg max-w-none">
                       <ReactMarkdown
                         components={{
+                          ...markdownComponents,
                           p: ({ ...props }) => <p className="text-2xl font-black text-accent-white uppercase tracking-wide" {...props} />,
-                          strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-                          em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
                         }}
                       >
                         {resolvedDecisionPrompt}
                       </ReactMarkdown>
                     </div>
 
-                    {timedOutPlayers.length > 0 && (
+                    {roomState.timed_out_players && roomState.timed_out_players.length > 0 && (
                       <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
                         <p className="text-accent-white font-bold text-center">
-                          Timer: {timedOutPlayers.join(', ')} did not submit in time
+                          Timer: {roomState.timed_out_players.join(', ')} did not submit in time
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <PlayerInput
-                    onSubmit={handleSubmitInput}
-                    hasSubmitted={hasSubmitted}
-                    submissionCount={roomState.player_inputs.length}
-                    totalPlayers={roomState.players.length}
-                    timerStartTime={timerStartTime}
-                    onTimeout={handleInputTimeout}
-                  />
+                  <PlayerInputPhase />
                 </Card>
               </div>
             )}
@@ -647,10 +407,10 @@ export const Game: React.FC = () => {
               <div className="space-y-6">
                 <Card className="bg-accent-black border-4 border-accent-white">
                   <div className="mb-6">
-                    {timedOutPlayers.length > 0 && (
+                    {(roomState.timed_out_players ?? []).length > 0 && (
                       <div className="bg-red-500 bg-opacity-20 border-2 border-red-500 p-4 rounded-lg mb-6">
                         <p className="text-accent-white font-bold text-center">
-                          Timer: {timedOutPlayers.join(', ')} did not submit in time
+                          Timer: {roomState.timed_out_players!.join(', ')} did not submit in time
                         </p>
                       </div>
                     )}
@@ -666,9 +426,8 @@ export const Game: React.FC = () => {
                         <div className="bg-primary bg-opacity-20 border-2 border-primary p-6 rounded-lg mb-6 prose prose-invert prose-lg max-w-none">
                           <ReactMarkdown
                             components={{
+                              ...markdownComponents,
                               p: ({ ...props }) => <p className="text-accent-white font-black text-lg text-center uppercase tracking-wide" {...props} />,
-                              strong: ({ ...props }) => <strong className="text-primary font-black" {...props} />,
-                              em: ({ ...props }) => <em className="text-primary-400 font-bold" {...props} />,
                             }}
                           >
                             {`"${resolvedDecisionPrompt}"`}
