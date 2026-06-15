@@ -411,6 +411,7 @@ class TestTimeoutFlows:
         game_turn.start_game(populated_room)
         room = room_manager.get_room(populated_room)
         room.phase = GamePhase.PLAYER_INPUT
+        room.input_phase_start_time = datetime(2020, 1, 1)
         room.player_inputs = [
             PlayerInput(player_name="Alice", text="A", votes=0),
             PlayerInput(player_name="Bob", text="B", votes=0),
@@ -424,6 +425,7 @@ class TestTimeoutFlows:
         game_turn.start_game(populated_room)
         room = room_manager.get_room(populated_room)
         room.phase = GamePhase.PLAYER_INPUT
+        room.input_phase_start_time = datetime(2020, 1, 1)
         room.player_inputs = [
             PlayerInput(player_name="Alice", text="A", votes=0),
         ]
@@ -437,12 +439,31 @@ class TestTimeoutFlows:
         game_turn.start_game(populated_room)
         room = room_manager.get_room(populated_room)
         room.phase = GamePhase.PLAYER_INPUT
+        room.input_phase_start_time = datetime(2020, 1, 1)
         room_manager.save_room(room)
 
         result = game_turn.handle_input_timeout(populated_room)
         updated = room_manager.get_room(populated_room)
         assert updated.turn == 2
         assert updated.phase == GamePhase.GENERATING_STORY
+
+    def test_handle_input_timeout_premature_is_noop(self, game_turn, room_manager, populated_room):
+        """A timeout call before the server clock has elapsed must not advance
+        the phase or time anyone out (prevents the instant phase-skip exploit)."""
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.PLAYER_INPUT
+        room.input_phase_start_time = datetime.now()  # just started
+        room.player_inputs = [PlayerInput(player_name="Alice", text="A", votes=0)]
+        room_manager.save_room(room)
+
+        result = game_turn.handle_input_timeout(populated_room)
+
+        updated = room_manager.get_room(populated_room)
+        assert result.response["status"] == "not_timed_out"
+        assert updated.phase == GamePhase.PLAYER_INPUT
+        assert updated.timed_out_players == []
+        assert updated.turn == 1
 
 
 # ------------------------------------------------------------------
@@ -543,6 +564,7 @@ class TestVoting:
         game_turn.start_game(populated_room)
         room = room_manager.get_room(populated_room)
         room.phase = GamePhase.VOTING
+        room.voting_phase_start_time = datetime(2020, 1, 1)
         room.player_inputs = [
             PlayerInput(player_name="Alice", text="A", votes=2, voters=["Bob"]),
             PlayerInput(player_name="Bob", text="B", votes=0, voters=[]),
@@ -552,6 +574,26 @@ class TestVoting:
         result = await game_turn.handle_voting_timeout(populated_room)
         assert result.response["status"] == "timeout_handled"
         assert "winner" in result.response
+
+    @pytest.mark.asyncio
+    async def test_handle_voting_timeout_premature_is_noop(self, game_turn, room_manager, populated_room):
+        """A voting timeout call before the server clock has elapsed must not
+        resolve voting or change the phase."""
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.voting_phase_start_time = datetime.now()  # just started
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=1, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=0, voters=[]),
+        ]
+        room_manager.save_room(room)
+
+        result = await game_turn.handle_voting_timeout(populated_room)
+
+        updated = room_manager.get_room(populated_room)
+        assert result.response["status"] == "not_timed_out"
+        assert updated.phase == GamePhase.VOTING
 
 
 # ------------------------------------------------------------------
@@ -604,8 +646,11 @@ class TestFullTurnLoop:
         room = room_manager.get_room(populated_room)
         assert room.turn == 2
 
-        # Turn 2: one player submits, other times out
+        # Turn 2: one player submits, other times out (force the clock past the limit)
         game_turn.submit_input(populated_room, "Alice", "Full court press!")
+        room = room_manager.get_room(populated_room)
+        room.input_phase_start_time = datetime(2020, 1, 1)
+        room_manager.save_room(room)
         result = game_turn.handle_input_timeout(populated_room)
 
         # Turn 3: simulate LLM ending the story
