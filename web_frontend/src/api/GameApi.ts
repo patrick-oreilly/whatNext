@@ -83,8 +83,8 @@ const createStoryStream = (
         if (parsed.paragraph) {
           callbacks.onChunk(parsed.paragraph);
         }
-      } catch {
-        // Ignore parsing errors, could be a partial message
+      } catch (e) {
+        console.warn('SSE parse error, raw data:', data.slice(0, 100), e);
       }
     }
   };

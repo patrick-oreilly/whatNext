@@ -5,7 +5,7 @@ import { Icon } from '../common/Icon';
 import { Timer } from 'lucide-react';
 
 interface VotingTimerProps {
-  startTime: string | null;  // ISO timestamp
+  startTime: string | null;  // ISO timestamp (used only for phase-change detection)
   timeoutSeconds: number;
   onTimeout: () => void;
 }
@@ -20,35 +20,25 @@ export const VotingTimer: React.FC<VotingTimerProps> = ({
 
   const onTimeoutRef = useRef(onTimeout);
   const timeoutTriggeredRef = useRef(false);
+  const mountTimeRef = useRef(Date.now());
 
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
   }, [onTimeout]);
 
+  // Reset when a new voting phase starts (detected by startTime change)
   useEffect(() => {
     timeoutTriggeredRef.current = false;
     setHasTimedOut(false);
     setTimeRemaining(timeoutSeconds);
+    mountTimeRef.current = Date.now();
   }, [startTime, timeoutSeconds]);
 
+  // Timer effect — uses local mount time, not backend timestamp
   useEffect(() => {
-    console.log('⏱️ [VotingTimer] useEffect triggered');
-    console.log('⏱️ [VotingTimer] startTime:', startTime);
-    console.log('⏱️ [VotingTimer] timeoutSeconds:', timeoutSeconds);
-
-    if (!startTime) {
-      console.warn('⚠️ [VotingTimer] No startTime provided, timer will not run');
-      return;
-    }
-
-    console.log('✅ [VotingTimer] Starting timer...');
-
     const calculateTimeRemaining = () => {
-      const start = new Date(startTime).getTime();
-      const now = Date.now();
-      const elapsed = (now - start) / 1000;
-      const remaining = Math.max(0, timeoutSeconds - elapsed);
-      return remaining;
+      const elapsed = (Date.now() - mountTimeRef.current) / 1000;
+      return Math.max(0, timeoutSeconds - elapsed);
     };
 
     const updateTime = () => {
@@ -56,29 +46,21 @@ export const VotingTimer: React.FC<VotingTimerProps> = ({
       setTimeRemaining(remaining);
 
       if (remaining === 0 && !timeoutTriggeredRef.current) {
-        console.log('⏰⏰⏰ [VotingTimer] TIME IS UP! Triggering timeout...');
         timeoutTriggeredRef.current = true;
         setHasTimedOut(true);
-        console.log('⏰ [VotingTimer] Calling onTimeout callback...');
         onTimeoutRef.current();
-        console.log('⏰ [VotingTimer] onTimeout callback completed');
       }
     };
 
     updateTime();
-
-    // Update timer every second
     const interval = setInterval(updateTime, 1000);
 
-    return () => {
-      console.log('⏱️ [VotingTimer] Cleaning up interval');
-      clearInterval(interval);
-    };
-  }, [startTime, timeoutSeconds]);
+    return () => clearInterval(interval);
+  }, [timeoutSeconds]);
 
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = Math.floor(timeRemaining % 60);
-  const isUrgent = timeRemaining <= 20;  // 20 seconds for voting (faster than input)
+  const isUrgent = timeRemaining <= 20;
 
   return (
     <div className={`flex items-center justify-center space-x-2 py-2 px-3 rounded ${
