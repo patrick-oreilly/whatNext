@@ -143,4 +143,18 @@ describe('PlayerInputPhase', () => {
     // Component renders without errors, proving it reads from the mocked store
     expect(screen.getByText('Submit Your Idea')).toBeDefined();
   });
+
+  it('fires the timeout based on the backend input_phase_start_time', async () => {
+    const original = mockRoomState.input_phase_start_time;
+    // Phase started 200s ago — already past the 120s limit
+    mockRoomState.input_phase_start_time = new Date(Date.now() - 200_000).toISOString();
+    try {
+      render(<PlayerInputPhase />);
+      await waitFor(() => {
+        expect(mockTriggerInputTimeout).toHaveBeenCalledWith('TEST123');
+      });
+    } finally {
+      mockRoomState.input_phase_start_time = original;
+    }
+  });
 });
