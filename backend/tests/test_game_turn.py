@@ -506,6 +506,39 @@ class TestVoting:
         assert len(result.response["tied_players"]) == 2
 
     @pytest.mark.asyncio
+    async def test_tie_winner_is_stable_across_calls(self, game_turn, room_manager, populated_room, monkeypatch):
+        """A tie must resolve to the same winner on every call/turn so that all
+        polling clients see one consistent result (C2)."""
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.turn = 1
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=1, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=1, voters=["Alice"]),
+        ]
+        room_manager.save_room(room)
+
+        # Simulate two clients getting divergent RNG: first pick the head of the
+        # tied list, then the tail. A correct implementation resolves once and
+        # reuses the winner, so random.choice is consulted at most once.
+        import backend.game_management.game_turn as gt_module
+        state = {"n": 0}
+
+        def diverging_choice(seq):
+            idx = 0 if state["n"] == 0 else len(seq) - 1
+            state["n"] += 1
+            return seq[idx]
+
+        monkeypatch.setattr(gt_module.random, "choice", diverging_choice)
+
+        r1 = await game_turn.resolve_voting(populated_room)
+        r2 = await game_turn.resolve_voting(populated_room)
+
+        assert r1.response["winning_player"] == r2.response["winning_player"]
+        assert state["n"] == 1, "winner should be resolved once and reused"
+
+    @pytest.mark.asyncio
     async def test_handle_voting_timeout(self, game_turn, room_manager, populated_room):
         game_turn.start_game(populated_room)
         room = room_manager.get_room(populated_room)

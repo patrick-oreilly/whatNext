@@ -296,20 +296,23 @@ async def stream_story(room_id: str):
     # Check if a stream is already active for this room+turn
     async with active_streams_lock:
         if stream_key in active_streams:
+            is_primary = False
             logger.info(
                 f"Stream already active for room {room_id} turn {room.turn}, "
                 "waiting for existing generation to complete"
             )
             stream_data = active_streams[stream_key]
         else:
+            is_primary = True
             stream_data = active_streams[stream_key] = {
                 "event": asyncio.Event(),
                 "response": [],
                 "error": None,
             }
 
-    # If we're a latecomer, wait for the primary stream to finish
-    if stream_data.get("event") and not stream_data["event"].is_set():
+    # Only latecomers wait — the primary is the one that sets this event, so it
+    # must fall through to run the generator below.
+    if not is_primary and not stream_data["event"].is_set():
         logger.info(f"Waiting for primary stream to finish for {stream_key}")
         await stream_data["event"].wait()
         logger.info(f"Primary stream finished for {stream_key}, replaying cached response")

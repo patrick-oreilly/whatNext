@@ -213,9 +213,23 @@ class GameTurn:
 
         max_votes = max(inp.votes for inp in room.player_inputs)
         tied_inputs = [inp for inp in room.player_inputs if inp.votes == max_votes]
-        winning_input = random.choice(tied_inputs)
         was_tie = len(tied_inputs) > 1
         tied_player_names = [inp.player_name for inp in tied_inputs]
+
+        # Resolve the (possibly random) winner once per turn and reuse it, so
+        # every polling client and the subsequent advance_turn agree on the
+        # same winner instead of re-rolling on each call.
+        already_resolved = next(
+            (inp for inp in tied_inputs if inp.player_name == room.winning_player),
+            None
+        ) if room.winner_resolved_turn == room.turn else None
+
+        if already_resolved is not None:
+            winning_input = already_resolved
+        else:
+            winning_input = random.choice(tied_inputs)
+            room.winning_player = winning_input.player_name
+            room.winner_resolved_turn = room.turn
 
         vote_counts = {inp.player_name: inp.votes for inp in room.player_inputs}
 
