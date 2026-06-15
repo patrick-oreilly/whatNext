@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -149,8 +150,10 @@ async def create_room(request: CreateRoomRequest):
 @app.post("/api/rooms/join", response_model=JoinRoomResponse)
 async def join_room(request: JoinRoomRequest):
     logger.info(f"[JOIN REQUEST] Room: {request.room_id}, Player: {request.player_name}")
-    room_manager.add_player(request.room_id, request.player_name)
-    room = room_manager.get_room(request.room_id)
+    lock = await room_manager.get_room_lock(request.room_id)
+    async with lock:
+        room_manager.add_player(request.room_id, request.player_name)
+        room = room_manager.get_room(request.room_id)
     logger.info(f"Player '{request.player_name}' joined room {request.room_id}")
     return JoinRoomResponse(
         room_id=request.room_id,
@@ -160,7 +163,9 @@ async def join_room(request: JoinRoomRequest):
 
 @app.post("/api/rooms/{room_id}/start")
 async def start_game(room_id: str):
-    result = game_turn.start_game(room_id)
+    lock = await room_manager.get_room_lock(room_id)
+    async with lock:
+        result = game_turn.start_game(room_id)
 
     if result.directive == TurnDirective.CREATE_SESSION:
         session_info = await session_manager.create_session(
@@ -188,7 +193,9 @@ async def get_input_timer(room_id: str):
 @app.post("/api/rooms/{room_id}/timeout")
 async def trigger_input_timeout(room_id: str):
     logger.info(f"Input timeout triggered for room {room_id}")
-    result = game_turn.handle_input_timeout(room_id)
+    lock = await room_manager.get_room_lock(room_id)
+    async with lock:
+        result = game_turn.handle_input_timeout(room_id)
     return result.response
 
 
@@ -212,22 +219,26 @@ async def delete_room(room_id: str):
 
 @app.post("/api/input/submit")
 async def submit_input(request: SubmitInputRequest):
-    result = game_turn.submit_input(
-        room_id=request.room_id,
-        player_name=request.player_name,
-        input_text=request.input_text
-    )
+    lock = await room_manager.get_room_lock(request.room_id)
+    async with lock:
+        result = game_turn.submit_input(
+            room_id=request.room_id,
+            player_name=request.player_name,
+            input_text=request.input_text
+        )
     logger.info(f"Player '{request.player_name}' submitted input in room {request.room_id}")
     return result.response
 
 
 @app.post("/api/voting/cast")
 async def cast_vote(request: CastVoteRequest):
-    result = game_turn.cast_vote(
-        room_id=request.room_id,
-        voter=request.voter,
-        chosen_player=request.chosen_player
-    )
+    lock = await room_manager.get_room_lock(request.room_id)
+    async with lock:
+        result = game_turn.cast_vote(
+            room_id=request.room_id,
+            voter=request.voter,
+            chosen_player=request.chosen_player
+        )
     logger.info(f"Player '{request.voter}' voted for '{request.chosen_player}' in room {request.room_id}")
     return result.response
 
@@ -248,7 +259,9 @@ async def trigger_voting_timeout(room_id: str):
 
 @app.post("/api/turn/advance/{room_id}")
 async def advance_turn(room_id: str):
-    result = game_turn.advance_turn(room_id)
+    lock = await room_manager.get_room_lock(room_id)
+    async with lock:
+        result = game_turn.advance_turn(room_id)
     _consume_directives(result, room_id)
     return result.response
 
@@ -266,31 +279,61 @@ async def stream_story(room_id: str):
     room = room_manager.get_room(room_id)
     stream_key = f"{room_id}_turn_{room.turn}"
 
+    # Check if a stream is already active for this room+turn
     async with active_streams_lock:
         if stream_key in active_streams:
-            logger.warning(
+            logger.info(
                 f"Stream already active for room {room_id} turn {room.turn}, "
-                "replaying cached response"
+                "waiting for existing generation to complete"
             )
-            if "response" in active_streams[stream_key]:
-                async def replay_generator():
-                    cached = active_streams[stream_key]["response"]
-                    for chunk in cached:
-                        yield f"data: {chunk}\n\n"
-                        await asyncio.sleep(0.01)
-                    yield "data: [DONE]\n\n"
+            stream_data = active_streams[stream_key]
+        else:
+            stream_data = active_streams[stream_key] = {
+                "event": asyncio.Event(),
+                "response": [],
+                "error": None,
+            }
 
-                return StreamingResponse(
-                    replay_generator(),
-                    media_type="text/event-stream",
-                    headers={
-                        "Cache-Control": "no-cache",
-                        "Connection": "keep-alive",
-                        "X-Accel-Buffering": "no",
-                    }
-                )
-        active_streams[stream_key] = {"response": []}
+    # If we're a latecomer, wait for the primary stream to finish
+    if stream_data.get("event") and not stream_data["event"].is_set():
+        logger.info(f"Waiting for primary stream to finish for {stream_key}")
+        await stream_data["event"].wait()
+        logger.info(f"Primary stream finished for {stream_key}, replaying cached response")
 
+    # Replay cached response
+    if stream_data.get("response"):
+        async def replay_generator():
+            cached = stream_data["response"]
+            for chunk in cached:
+                yield f"data: {json.dumps({'paragraph': chunk})}\n\n"
+                await asyncio.sleep(0.01)
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            replay_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
+
+    if stream_data.get("error"):
+        async def error_generator():
+            yield f"data: [ERROR] {stream_data['error']}\n\n"
+
+        return StreamingResponse(
+            error_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
+
+    # Primary stream — this is the first request for this turn
     async def event_generator():
         try:
             full_response = ""
@@ -299,6 +342,8 @@ async def stream_story(room_id: str):
             room = room_manager.get_room(room_id)
 
             if not room.next_prompt:
+                stream_data["error"] = "No prompt prepared"
+                stream_data["event"].set()
                 yield "data: [ERROR] No prompt prepared\n\n"
                 return
 
@@ -319,12 +364,11 @@ async def stream_story(room_id: str):
                 for i in range(0, len(paragraph_text), chunk_size):
                     chunk = paragraph_text[i:i + chunk_size]
                     paragraph_chunks.append(chunk)
-                    yield f"data: {chunk}\n\n"
+                    yield f"data: {json.dumps({'paragraph': chunk})}\n\n"
                     await asyncio.sleep(0.02)
 
-            async with active_streams_lock:
-                if stream_key in active_streams:
-                    active_streams[stream_key]["response"] = paragraph_chunks
+            stream_data["response"] = paragraph_chunks
+            stream_data["event"].set()
 
             _consume_directives(result, room_id)
 
@@ -334,6 +378,8 @@ async def stream_story(room_id: str):
 
         except Exception as e:
             logger.error(f"Error streaming story for room {room_id}: {e}")
+            stream_data["error"] = str(e)
+            stream_data["event"].set()
             yield f"data: [ERROR] {str(e)}\n\n"
 
         finally:
@@ -359,8 +405,11 @@ async def stream_story(room_id: str):
 
 @app.post("/api/game/end/{room_id}")
 async def end_game(room_id: str):
-    result = game_turn.end_game(room_id)
+    lock = await room_manager.get_room_lock(room_id)
+    async with lock:
+        result = game_turn.end_game(room_id)
     _consume_directives(result, room_id)
+    logger.info(f"Game ended for room {room_id}")
     return result.response
 
 

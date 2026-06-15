@@ -29,7 +29,7 @@ export const PlayerInputPhase: React.FC = () => {
   const timeoutFiredRef = useRef(false);
 
   const roomId = roomState?.room_id;
-  const startTime = roomState?.input_phase_start_time ?? null;
+  const mountTimeRef = useRef(Date.now());
 
   const currentInput = useMemo(
     () => roomState?.player_inputs.find(i => i.player_name === currentPlayer),
@@ -89,14 +89,10 @@ export const PlayerInputPhase: React.FC = () => {
     }
   }, [roomId]);
 
-  // Timer effect
+  // Timer effect - uses local mount time, not backend timestamp
   useEffect(() => {
-    if (!startTime) return;
-
     const calculateTimeRemaining = () => {
-      const start = new Date(startTime).getTime();
-      const now = Date.now();
-      const elapsed = (now - start) / 1000;
+      const elapsed = (Date.now() - mountTimeRef.current) / 1000;
       return Math.max(0, INPUT_TIMEOUT_SECONDS - elapsed);
     };
 
@@ -120,7 +116,7 @@ export const PlayerInputPhase: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [startTime, handleInputTimeout]);
+  }, [handleInputTimeout]);
 
   // Reset input when phase changes (player re-enters)
   useEffect(() => {
@@ -132,6 +128,7 @@ export const PlayerInputPhase: React.FC = () => {
       setTimeRemaining(INPUT_TIMEOUT_SECONDS);
       setHasTimedOut(false);
       timeoutFiredRef.current = false;
+      mountTimeRef.current = Date.now();
     }
   }, [hasSubmitted]);
 
@@ -236,8 +233,7 @@ export const PlayerInputPhase: React.FC = () => {
           ) : (
             <div>
               {/* Timer */}
-              {startTime && (
-                <div className="mb-3 flex justify-center">
+              <div className="mb-3 flex justify-center">
                   <div className={`flex items-center justify-center space-x-2 py-2 px-3 rounded ${
                     isUrgent
                       ? 'bg-red-500 bg-opacity-10 animate-pulse'
@@ -260,7 +256,6 @@ export const PlayerInputPhase: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              )}
 
               <textarea
                 value={input}

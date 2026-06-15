@@ -138,7 +138,8 @@ class GameTurn:
             ))
             logger.info(f"Player '{player_name}' submitted NEW input in room {room_id}")
 
-        if len(room.player_inputs) == len(room.players):
+        active_players = [p for p in room.players if p not in room.timed_out_players]
+        if len(room.player_inputs) == len(active_players):
             room.phase = GamePhase.VOTING
             room.voting_phase_start_time = datetime.now()
             logger.info(f"All players submitted in room {room_id} - advancing to VOTING")
@@ -285,7 +286,9 @@ class GameTurn:
 
         elif len(room.player_inputs) == 1:
             single_input = room.player_inputs[0]
-            room.scores[single_input.player_name] = room.scores.get(single_input.player_name, 0) + 15
+            if room.points_awarded_turn != room.turn:
+                room.scores[single_input.player_name] = room.scores.get(single_input.player_name, 0) + 15
+                room.points_awarded_turn = room.turn
             single_input.votes = 1
             single_input.voters = []
 
@@ -404,15 +407,31 @@ class GameTurn:
     def advance_turn(self, room_id: str) -> TurnResult:
         room = self._get_room(room_id)
 
-        if room.phase in (GamePhase.GENERATING_STORY, GamePhase.GAME_OVER):
+        if room.phase == GamePhase.GAME_OVER:
+            logger.warning(
+                f"advance_turn ignored for room {room_id}: game already over"
+            )
+            return TurnResult(
+                success=True,
+                response={"status": "noop_game_over", "turn": room.turn, "phase": room.phase},
+                phase=room.phase
+            )
+
+        if room.phase == GamePhase.GENERATING_STORY:
             logger.warning(
                 f"advance_turn ignored for room {room_id}: "
-                f"turn already advanced (phase={room.phase})"
+                f"story already generating (phase={room.phase})"
             )
             return TurnResult(
                 success=True,
                 response={"status": "noop_already_advanced", "turn": room.turn, "phase": room.phase},
                 phase=room.phase
+            )
+
+        if room.phase != GamePhase.VOTING:
+            raise InvalidGamePhaseError(
+                f"Cannot advance turn in phase {room.phase}",
+                details=f"Room {room_id} is in phase {room.phase}, expected VOTING"
             )
 
         if room.story_has_ended:
@@ -502,6 +521,7 @@ class GameTurn:
 
     def process_llm_result(self, room_id: str, raw_text: str) -> TurnResult:
         room = self._get_room(room_id)
+        self._validate_phase(room, GamePhase.GENERATING_STORY, "process LLM result")
 
         llm_output = self.parse_llm_response(raw_text)
 
@@ -517,12 +537,13 @@ class GameTurn:
         if llm_output.has_story_ended:
             logger.info(f"Story has ended flag set for room {room_id}")
             room.story_has_ended = True
+            room.phase = GamePhase.GAME_OVER
             self._save_room(room)
             return TurnResult(
                 success=True,
                 directive=TurnDirective.DISPOSE_SESSION,
                 response={"status": "story_ending", "has_story_ended": True},
-                phase=room.phase
+                phase=GamePhase.GAME_OVER
             )
 
         room.phase = GamePhase.PLAYER_INPUT
