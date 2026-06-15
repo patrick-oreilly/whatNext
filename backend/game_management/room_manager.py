@@ -103,9 +103,17 @@ class RoomManager:
                 f"Player '{player_name}' not in room {room_id}"
             )
 
+        departing_token = room.player_tokens.pop(player_name, None)
         room.players.remove(player_name)
         if player_name in room.scores:
             del room.scores[player_name]
+
+        # Host succession: if the host left and players remain, promote the new
+        # players[0]. Identity is the token, never the name.
+        if room.players and departing_token is not None and departing_token == room.host_token:
+            new_host = room.players[0]
+            room.host_token = room.player_tokens.get(new_host)
+            logger.info(f"Host left room {room_id}; promoted '{new_host}' to host")
 
         room.update_activity()
         self.storage.save_room(room)

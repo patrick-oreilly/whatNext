@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -109,11 +109,14 @@ def _require_member_token(room, player_token: str) -> None:
 
 
 def _require_host_token(room, player_token: str) -> None:
-    """Authorize a privileged action restricted to the host (first player)."""
-    if not room.players:
+    """Authorize a privileged action restricted to the host.
+
+    The host is identified by the stored ``host_token`` (assigned to the first
+    joiner and reassigned on host departure), never by seat order or name.
+    """
+    if not room.host_token:
         raise HTTPException(status_code=403, detail="Room has no host")
-    host = room.players[0]
-    if not player_token or room.player_tokens.get(host) != player_token:
+    if not player_token or player_token != room.host_token:
         raise HTTPException(status_code=403, detail="Only the host can perform this action")
 
 
@@ -173,6 +176,9 @@ async def join_room(request: JoinRoomRequest):
         room = room_manager.get_room(request.room_id)
         player_token = str(uuid.uuid4())
         room.player_tokens[request.player_name] = player_token
+        # The first player to join becomes the host.
+        if room.host_token is None:
+            room.host_token = player_token
         room_manager.save_room(room)
     logger.info(f"Player '{request.player_name}' joined room {request.room_id}")
     return JoinRoomResponse(
@@ -183,7 +189,7 @@ async def join_room(request: JoinRoomRequest):
 
 
 @app.post("/api/rooms/{room_id}/start")
-async def start_game(room_id: str, player_token: str = None):
+async def start_game(room_id: str, player_token: str = Body(default=None, embed=True)):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
         _require_host_token(room_manager.get_room(room_id), player_token)
@@ -213,7 +219,7 @@ async def get_input_timer(room_id: str):
 
 
 @app.post("/api/rooms/{room_id}/timeout")
-async def trigger_input_timeout(room_id: str, player_token: str = None):
+async def trigger_input_timeout(room_id: str, player_token: str = Body(default=None, embed=True)):
     logger.info(f"Input timeout triggered for room {room_id}")
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
@@ -285,7 +291,7 @@ async def get_voting_results(room_id: str):
 
 
 @app.post("/api/voting/{room_id}/timeout")
-async def trigger_voting_timeout(room_id: str, player_token: str = None):
+async def trigger_voting_timeout(room_id: str, player_token: str = Body(default=None, embed=True)):
     _require_member_token(room_manager.get_room(room_id), player_token)
     result = await game_turn.handle_voting_timeout(room_id)
     logger.info(f"Voting timeout handled in room {room_id}")
@@ -293,7 +299,7 @@ async def trigger_voting_timeout(room_id: str, player_token: str = None):
 
 
 @app.post("/api/turn/advance/{room_id}")
-async def advance_turn(room_id: str, player_token: str = None):
+async def advance_turn(room_id: str, player_token: str = Body(default=None, embed=True)):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
         _require_member_token(room_manager.get_room(room_id), player_token)
@@ -443,7 +449,7 @@ async def stream_story(room_id: str):
 # ------------------------------------------------------------------
 
 @app.post("/api/game/end/{room_id}")
-async def end_game(room_id: str, player_token: str = None):
+async def end_game(room_id: str, player_token: str = Body(default=None, embed=True)):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
         _require_host_token(room_manager.get_room(room_id), player_token)
