@@ -29,7 +29,12 @@ export const PlayerInputPhase: React.FC = () => {
   const timeoutFiredRef = useRef(false);
 
   const roomId = roomState?.room_id;
-  const mountTimeRef = useRef(Date.now());
+  // Drive the timer from the backend's authoritative phase-start timestamp so it
+  // survives refreshes and stays consistent across clients (instead of a local
+  // mount time that resets on every remount).
+  const inputStartMs = roomState?.input_phase_start_time
+    ? new Date(roomState.input_phase_start_time).getTime()
+    : null;
 
   const currentInput = useMemo(
     () => roomState?.player_inputs.find(i => i.player_name === currentPlayer),
@@ -89,23 +94,15 @@ export const PlayerInputPhase: React.FC = () => {
     }
   }, [roomId]);
 
-  // Timer effect - uses local mount time, not backend timestamp
+  // Timer effect — driven by the backend input_phase_start_time
   useEffect(() => {
     const calculateTimeRemaining = () => {
-      const elapsed = (Date.now() - mountTimeRef.current) / 1000;
+      if (inputStartMs === null) return INPUT_TIMEOUT_SECONDS;
+      const elapsed = (Date.now() - inputStartMs) / 1000;
       return Math.max(0, INPUT_TIMEOUT_SECONDS - elapsed);
     };
 
-    const remaining = calculateTimeRemaining();
-    setTimeRemaining(remaining);
-
-    if (remaining === 0 && !timeoutFiredRef.current) {
-      setHasTimedOut(true);
-      handleInputTimeout();
-      return;
-    }
-
-    const interval = setInterval(() => {
+    const tick = () => {
       const r = calculateTimeRemaining();
       setTimeRemaining(r);
 
@@ -113,24 +110,23 @@ export const PlayerInputPhase: React.FC = () => {
         setHasTimedOut(true);
         handleInputTimeout();
       }
-    }, 1000);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
-  }, [handleInputTimeout]);
+  }, [handleInputTimeout, inputStartMs]);
 
-  // Reset input when phase changes (player re-enters)
+  // Reset per-input-phase state when a new input phase begins (new start time)
   useEffect(() => {
-    if (!hasSubmitted) {
-      setInput('');
-      setSubmittedText(null);
-      setLocalHasSubmitted(false);
-      setError(null);
-      setTimeRemaining(INPUT_TIMEOUT_SECONDS);
-      setHasTimedOut(false);
-      timeoutFiredRef.current = false;
-      mountTimeRef.current = Date.now();
-    }
-  }, [hasSubmitted]);
+    setInput('');
+    setSubmittedText(null);
+    setLocalHasSubmitted(false);
+    setError(null);
+    setHasTimedOut(false);
+    timeoutFiredRef.current = false;
+  }, [inputStartMs]);
 
   const handleSubmit = async () => {
     const validationError = validatePlayerInput(input);
