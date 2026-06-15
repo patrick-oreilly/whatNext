@@ -124,7 +124,7 @@ class TestRoomManagerCRUD:
         room.last_activity = datetime(2020, 1, 1)
         room_manager.save_room(room)
         deleted = room_manager.cleanup_idle_rooms()
-        assert deleted >= 1
+        assert len(deleted) >= 1
         with pytest.raises(Exception):
             room_manager.get_room(room_id)
 

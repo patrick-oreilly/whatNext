@@ -436,7 +436,10 @@ class GameTurn:
 
         if room.story_has_ended:
             logger.info(f"Story already ended in room {room_id}, transitioning to GAME_OVER")
+            if room.player_inputs:
+                self._resolve_voting_locked(room, room_id)
             room.phase = GamePhase.GAME_OVER
+            room.update_activity()
             self._save_room(room)
             return TurnResult(
                 success=True,
@@ -446,8 +449,9 @@ class GameTurn:
             )
 
         winning_input_text = None
-        if len(room.player_inputs) > 0:
-            winning_input_text = max(room.player_inputs, key=lambda inp: inp.votes).text
+        if room.player_inputs:
+            result = self._resolve_voting_locked(room, room_id)
+            winning_input_text = result.response.get("winning_input")
 
         room.turn += 1
         room.player_inputs = []

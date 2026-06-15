@@ -73,6 +73,7 @@ class GameRoom(BaseModel):
     storyline: StoryLineType
     players: List[str] = []
     scores: Dict[str, int] = {}
+    player_tokens: Dict[str, str] = {}
     turn: int = 0
     phase: GamePhase = GamePhase.LOBBY
     story_history: List[StorySegment] = []
@@ -162,12 +163,14 @@ class SubmitInputRequest(BaseModel):
     room_id: str
     player_name: str
     input_text: str = Field(..., min_length=3, max_length=500)
+    player_token: Optional[str] = Field(default=None)
 
 class CastVoteRequest(BaseModel):
     """Request to vote for a story continuation"""
     room_id: str
     voter: str
     chosen_player: str
+    player_token: Optional[str] = Field(default=None)
 
 # API RESPONSE MODELS
 
@@ -203,6 +206,7 @@ class JoinRoomResponse(BaseModel):
     room_id: str
     players: List[str]
     status: str = "joined"
+    player_token: str = ""
 
 class VotingResultsResponse(BaseModel):
     """Results of the voting phase"""
