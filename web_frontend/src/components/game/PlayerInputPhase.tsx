@@ -86,13 +86,13 @@ export const PlayerInputPhase: React.FC = () => {
     console.log('⏰ [PlayerInputPhase] Input timeout triggered!');
 
     try {
-      await GameApi.triggerInputTimeout(roomId);
+      await GameApi.triggerInputTimeout(roomId, playerToken);
       console.log('✅ [PlayerInputPhase] Backend timeout handler completed');
     } catch (e) {
       console.error('❌ [PlayerInputPhase] Failed to trigger timeout:', e);
       setError('An error occurred while handling the timeout.');
     }
-  }, [roomId]);
+  }, [roomId, playerToken]);
 
   // Timer effect — driven by the backend input_phase_start_time
   useEffect(() => {

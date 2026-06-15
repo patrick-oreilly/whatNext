@@ -102,6 +102,12 @@ const createStoryStream = (
 };
 
 // ---------------------------------------------------------------------------
+// Auth helper — append the caller's player token as a query param
+// ---------------------------------------------------------------------------
+const tokenQuery = (playerToken?: string | null): string =>
+  playerToken ? `?player_token=${encodeURIComponent(playerToken)}` : '';
+
+// ---------------------------------------------------------------------------
 // GameApi
 // ---------------------------------------------------------------------------
 export const GameApi = {
@@ -126,8 +132,8 @@ export const GameApi = {
   /**
    * Start the game in a room
    */
-  startGame: async (roomId: string): Promise<StartGameResponse> => {
-    const response = await apiClient.post<StartGameResponse>(`/api/rooms/${roomId}/start`);
+  startGame: async (roomId: string, playerToken?: string | null): Promise<StartGameResponse> => {
+    const response = await apiClient.post<StartGameResponse>(`/api/rooms/${roomId}/start${tokenQuery(playerToken)}`);
     return response.data;
   },
 
@@ -142,8 +148,8 @@ export const GameApi = {
   /**
    * Delete a room
    */
-  deleteRoom: async (roomId: string): Promise<void> => {
-    await apiClient.delete(`/api/rooms/${roomId}`);
+  deleteRoom: async (roomId: string, playerToken?: string | null): Promise<void> => {
+    await apiClient.delete(`/api/rooms/${roomId}${tokenQuery(playerToken)}`);
   },
 
   // -- Gameplay -------------------------------------------------------------
@@ -175,29 +181,29 @@ export const GameApi = {
   /**
    * Advance to next turn
    */
-  advanceTurn: async (roomId: string): Promise<AdvanceTurnResponse> => {
-    const response = await apiClient.post<AdvanceTurnResponse>(`/api/turn/advance/${roomId}`);
+  advanceTurn: async (roomId: string, playerToken?: string | null): Promise<AdvanceTurnResponse> => {
+    const response = await apiClient.post<AdvanceTurnResponse>(`/api/turn/advance/${roomId}${tokenQuery(playerToken)}`);
     return response.data;
   },
 
   /**
    * Trigger input phase timeout
    */
-  triggerInputTimeout: async (roomId: string): Promise<{ status: string; room_id: string; phase: string }> => {
-    const response = await apiClient.post<{ status: string; room_id: string; phase: string }>(`/api/rooms/${roomId}/timeout`);
+  triggerInputTimeout: async (roomId: string, playerToken?: string | null): Promise<{ status: string; room_id: string; phase: string }> => {
+    const response = await apiClient.post<{ status: string; room_id: string; phase: string }>(`/api/rooms/${roomId}/timeout${tokenQuery(playerToken)}`);
     return response.data;
   },
 
   /**
    * Trigger voting phase timeout
    */
-  triggerVotingTimeout: async (roomId: string): Promise<{
+  triggerVotingTimeout: async (roomId: string, playerToken?: string | null): Promise<{
     status: string;
     room_id: string;
     winner: string;
     votes_received: Record<string, number>;
   }> => {
-    const response = await apiClient.post(`/api/voting/${roomId}/timeout`);
+    const response = await apiClient.post(`/api/voting/${roomId}/timeout${tokenQuery(playerToken)}`);
     return response.data;
   },
 
@@ -219,12 +225,12 @@ export const GameApi = {
   /**
    * End the game (when story has [END] flag)
    */
-  endGame: async (roomId: string): Promise<{
+  endGame: async (roomId: string, playerToken?: string | null): Promise<{
     status: string;
     room_id: string;
     final_scores: Record<string, number>;
   }> => {
-    const response = await apiClient.post(`/api/game/end/${roomId}`);
+    const response = await apiClient.post(`/api/game/end/${roomId}${tokenQuery(playerToken)}`);
     return response.data;
   },
 
