@@ -18,12 +18,14 @@ export interface SubmitInputRequest {
   room_id: string;
   player_name: string;
   input_text: string;
+  player_token?: string;
 }
 
 export interface CastVoteRequest {
   room_id: string;
   voter: string;
   chosen_player: string;
+  player_token?: string;
 }
 
 // Response types
@@ -37,6 +39,7 @@ export interface JoinRoomResponse {
   room_id: string;
   players: string[];
   status: string;
+  player_token: string;
 }
 
 export interface RoomStateResponse {

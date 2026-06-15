@@ -14,7 +14,7 @@ import { useGameStore } from '../../store/gameStore';
 import { GamePhase, type VotingResultsResponse } from '../../types';
 
 export const VotingPhase: React.FC = () => {
-  const { roomState, currentPlayer } = useGameStore();
+  const { roomState, currentPlayer, playerToken } = useGameStore();
   const roomId = roomState?.room_id;
 
   const [hasVoted, setHasVoted] = useState(false);
@@ -78,6 +78,7 @@ export const VotingPhase: React.FC = () => {
         room_id: roomId,
         voter: currentPlayer,
         chosen_player: chosenPlayer,
+        player_token: playerToken ?? undefined,
       });
       setHasVoted(true);
       // NOTE: Polling in Game.tsx will eventually pick up the updated roomState

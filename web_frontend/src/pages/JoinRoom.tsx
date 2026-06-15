@@ -14,6 +14,7 @@ import {extractErrorMessage} from '../utils/errorMessageExtraction';
 export const JoinRoom: React.FC = () => {
   const navigate = useNavigate();
   const setCurrentPlayer = useGameStore((state) => state.setCurrentPlayer);
+  const setPlayerToken = useGameStore((state) => state.setPlayerToken);
   const [savedPlayerName, setSavedPlayerName] = useLocalStorage(STORAGE_KEYS.PLAYER_NAME, '');
 
   const [playerName, setPlayerName] = useState(savedPlayerName);
@@ -43,7 +44,7 @@ export const JoinRoom: React.FC = () => {
       const formattedCode = formatRoomCode(roomCode.trim());
 
       // Join room
-      await GameApi.joinRoom({
+      const joinResponse = await GameApi.joinRoom({
         room_id: formattedCode,
         player_name: playerName.trim(),
       });
@@ -51,6 +52,7 @@ export const JoinRoom: React.FC = () => {
       // Save player name and set in store
       setSavedPlayerName(playerName.trim());
       setCurrentPlayer(playerName.trim());
+      setPlayerToken(joinResponse.player_token);
 
       // Navigate to lobby
       navigate(`/lobby/${formattedCode}`);

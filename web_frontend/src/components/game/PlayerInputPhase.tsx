@@ -14,7 +14,7 @@ import { markdownComponents } from './markdownComponents';
 const INPUT_TIMEOUT_SECONDS = 120;
 
 export const PlayerInputPhase: React.FC = () => {
-  const { roomState, currentPlayer } = useGameStore();
+  const { roomState, currentPlayer, playerToken } = useGameStore();
 
   const [input, setInput] = useState('');
   const [submittedText, setSubmittedText] = useState<string | null>(null);
@@ -149,6 +149,7 @@ export const PlayerInputPhase: React.FC = () => {
         room_id: roomId,
         player_name: currentPlayer,
         input_text: input.trim(),
+        player_token: playerToken ?? undefined,
       });
       setSubmittedText(input.trim());
       setInput('');
