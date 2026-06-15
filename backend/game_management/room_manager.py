@@ -162,22 +162,22 @@ class RoomManager:
     # Cleanup
     # ------------------------------------------------------------------
 
-    def cleanup_idle_rooms(self) -> int:
-        deleted = 0
+    def cleanup_idle_rooms(self) -> List[str]:
+        deleted_ids = []
         room_ids = self.list_rooms()
         for room_id in room_ids:
             try:
                 room = self.get_room(room_id)
                 if room.is_idle(settings.IDLE_TIMEOUT_MINUTES):
                     self.delete_room(room_id)
-                    deleted += 1
+                    deleted_ids.append(room_id)
                     logger.info(f"Cleaned up idle room {room_id}")
             except RoomNotFoundError:
                 continue
 
-        if deleted > 0:
-            logger.info(f"Cleanup completed: {deleted} idle rooms deleted")
-        return deleted
+        if deleted_ids:
+            logger.info(f"Cleanup completed: {len(deleted_ids)} idle rooms deleted")
+        return deleted_ids
 
     # ------------------------------------------------------------------
     # ID generation

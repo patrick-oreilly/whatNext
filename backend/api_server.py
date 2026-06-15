@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -42,9 +42,11 @@ async def cleanup_task():
     while True:
         try:
             await asyncio.sleep(300)
-            deleted = room_manager.cleanup_idle_rooms()
-            if deleted > 0:
-                logger.info(f"Background cleanup: removed {deleted} idle rooms")
+            deleted_ids = room_manager.cleanup_idle_rooms()
+            for room_id in deleted_ids:
+                session_manager.close_session(room_id)
+            if deleted_ids:
+                logger.info(f"Background cleanup: removed {len(deleted_ids)} idle rooms")
         except Exception as e:
             logger.error(f"Error in cleanup task: {e}")
 
@@ -154,10 +156,14 @@ async def join_room(request: JoinRoomRequest):
     async with lock:
         room_manager.add_player(request.room_id, request.player_name)
         room = room_manager.get_room(request.room_id)
+        player_token = str(uuid.uuid4())
+        room.player_tokens[request.player_name] = player_token
+        room_manager.save_room(room)
     logger.info(f"Player '{request.player_name}' joined room {request.room_id}")
     return JoinRoomResponse(
         room_id=request.room_id,
-        players=room.players
+        players=room.players,
+        player_token=player_token
     )
 
 
@@ -221,6 +227,10 @@ async def delete_room(room_id: str):
 async def submit_input(request: SubmitInputRequest):
     lock = await room_manager.get_room_lock(request.room_id)
     async with lock:
+        room = room_manager.get_room(request.room_id)
+        stored_token = room.player_tokens.get(request.player_name)
+        if stored_token and stored_token != request.player_token:
+            raise HTTPException(status_code=403, detail="Invalid player token")
         result = game_turn.submit_input(
             room_id=request.room_id,
             player_name=request.player_name,
@@ -234,6 +244,10 @@ async def submit_input(request: SubmitInputRequest):
 async def cast_vote(request: CastVoteRequest):
     lock = await room_manager.get_room_lock(request.room_id)
     async with lock:
+        room = room_manager.get_room(request.room_id)
+        stored_token = room.player_tokens.get(request.voter)
+        if stored_token and stored_token != request.player_token:
+            raise HTTPException(status_code=403, detail="Invalid player token")
         result = game_turn.cast_vote(
             room_id=request.room_id,
             voter=request.voter,
@@ -436,10 +450,12 @@ async def get_active_sessions():
 
 @app.post("/api/cleanup/run")
 async def trigger_cleanup():
-    deleted = room_manager.cleanup_idle_rooms()
+    deleted_ids = room_manager.cleanup_idle_rooms()
+    for room_id in deleted_ids:
+        session_manager.close_session(room_id)
     return {
         "status": "complete",
-        "rooms_deleted": deleted
+        "rooms_deleted": len(deleted_ids)
     }
 
 

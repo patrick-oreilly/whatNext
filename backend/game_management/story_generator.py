@@ -55,6 +55,15 @@ class StoryGenerator:
         logger.info(f"Generated opening prompt for {storyline}")
         return base_prompt
     
+    def _build_history_context(self, story_history: List[StorySegment]) -> str:
+        if not story_history:
+            return ""
+        recent = story_history[-5:]
+        context = "\n\nRecent story events (for context):\n"
+        for seg in recent:
+            context += f"- {seg.content.paragraph}\n"
+        return context
+
     def generate_continuation_prompt(
         self,
         storyline: StoryLineType,
@@ -66,9 +75,6 @@ class StoryGenerator:
         """
         Generate prompt for story continuation based on winning player input
 
-        Decision 2: We use ADK's built-in context, so we don't need to
-        send full history - just the winning input and turn info.
-
         Args:
             storyline: Type of story
             story_history: Previous story segments (for reference)
@@ -79,13 +85,10 @@ class StoryGenerator:
         Returns:
             Prompt text for AI
         """
-        # Format the player's input
         formatted_input = self.format_player_input(winning_input)
 
-        # Add explicit turn information for better pacing
         turn_info = f"\n\n[Turn {turn} of {max_turns}]"
 
-        # Check if we should start wrapping up
         is_near_end = turn >= (max_turns - 2)
 
         if is_near_end:
@@ -96,7 +99,8 @@ class StoryGenerator:
         else:
             ending_instruction = ""
 
-        prompt = f"{formatted_input}{turn_info}{ending_instruction}"
+        history_context = self._build_history_context(story_history)
+        prompt = f"{history_context}{formatted_input}{turn_info}{ending_instruction}"
 
         logger.info(f"Generated continuation prompt for turn {turn}/{max_turns}")
         return prompt
@@ -134,13 +138,13 @@ class StoryGenerator:
         else:
             ending_instruction = ""
 
-        # Instruction for natural continuation
         natural_instruction = (
             "Continue the story naturally, advancing the plot in a logical and engaging way. "
             "Build on the previous events and maintain the established tone and pacing."
         )
 
-        prompt = f"{natural_instruction}\n\n{turn_info}{ending_instruction}"
+        history_context = self._build_history_context(story_history)
+        prompt = f"{history_context}{natural_instruction}\n\n{turn_info}{ending_instruction}"
 
         logger.info(f"Generated natural continuation prompt for turn {turn}/{max_turns}")
         return prompt
@@ -170,7 +174,8 @@ class StoryGenerator:
             "Make it memorable and impactful."
         )
         
-        prompt = f"{formatted_input}{ending_instruction}"
+        history_context = self._build_history_context(story_history)
+        prompt = f"{history_context}{formatted_input}{ending_instruction}"
         
         logger.info("Generated final story prompt")
         return prompt
@@ -185,13 +190,9 @@ class StoryGenerator:
         Returns:
             Formatted input ready for AI
         """
-        # Clean up the input
         cleaned = input_text.strip()
-        
-        # Frame it as a continuation directive
-        # Note: The AI already has full context from previous messages
-        formatted = f"{cleaned}"
-        
+        cleaned = cleaned.replace('{', '').replace('}', '')
+        formatted = f'<player_input>\n{cleaned}\n</player_input>'
         return formatted
     
     def should_end_story(self, turn: int, max_turns: int) -> bool:
