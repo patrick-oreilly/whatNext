@@ -87,6 +87,8 @@ class GameRoom(BaseModel):
     story_has_ended: bool = False  # Flag indicating AI generated [END] marker
     points_awarded_turn: Optional[int] = None  # NEW: Track which turn had points awarded
     voting_phase_start_time: Optional[datetime] = None  # Track when voting phase started
+    winning_player: Optional[str] = None  # Resolved winner for winner_resolved_turn
+    winner_resolved_turn: Optional[int] = None  # Turn the winner was last resolved for
 
     class Config:
         use_enum_values = True
