@@ -12,3 +12,8 @@ CLAUDE.md
 .env.production
 .vercel
 __pycache__
+*.skill
+game-mechanics-validator/
+multiplayer-game-tester/
+problems.md
+progress.md
