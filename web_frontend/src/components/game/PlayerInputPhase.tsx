@@ -11,10 +11,13 @@ import { StatusDisplay } from './StatusDisplay';
 import { StoryMarkdown } from './StoryMarkdown';
 import { markdownComponents } from './markdownComponents';
 
-const INPUT_TIMEOUT_SECONDS = 120;
-
 export const PlayerInputPhase: React.FC = () => {
   const { roomState, currentPlayer, playerToken } = useGameStore();
+
+  // Drive the input timeout from the backend's authoritative value (mirrors how
+  // VotingPhase reads voting_timeout_seconds) so it stays in sync with the
+  // server's INPUT_TIMER_SECONDS instead of a hardcoded constant.
+  const inputTimeoutSeconds = roomState?.input_timeout_seconds ?? 120;
 
   const [input, setInput] = useState('');
   const [submittedText, setSubmittedText] = useState<string | null>(null);
@@ -23,7 +26,7 @@ export const PlayerInputPhase: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Timer state
-  const [timeRemaining, setTimeRemaining] = useState<number>(INPUT_TIMEOUT_SECONDS);
+  const [timeRemaining, setTimeRemaining] = useState<number>(inputTimeoutSeconds);
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
   const timeoutFiredRef = useRef(false);
@@ -97,9 +100,9 @@ export const PlayerInputPhase: React.FC = () => {
   // Timer effect — driven by the backend input_phase_start_time
   useEffect(() => {
     const calculateTimeRemaining = () => {
-      if (inputStartMs === null) return INPUT_TIMEOUT_SECONDS;
+      if (inputStartMs === null) return inputTimeoutSeconds;
       const elapsed = (Date.now() - inputStartMs) / 1000;
-      return Math.max(0, INPUT_TIMEOUT_SECONDS - elapsed);
+      return Math.max(0, inputTimeoutSeconds - elapsed);
     };
 
     const tick = () => {
@@ -116,7 +119,7 @@ export const PlayerInputPhase: React.FC = () => {
     const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
-  }, [handleInputTimeout, inputStartMs]);
+  }, [handleInputTimeout, inputStartMs, inputTimeoutSeconds]);
 
   // Reset per-input-phase state when a new input phase begins (new start time)
   useEffect(() => {

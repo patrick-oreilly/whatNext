@@ -17,3 +17,6 @@ game-mechanics-validator/
 multiplayer-game-tester/
 problems.md
 progress.md
+
+.claude/worktrees/
+.serena/

@@ -198,6 +198,7 @@ class RoomStateResponse(BaseModel):
     timed_out_players: List[str] = []
     story_has_ended: bool = False
     voting_timeout_seconds: Optional[int] = None
+    input_timeout_seconds: Optional[int] = None
 
     class Config:
         use_enum_values = True  
