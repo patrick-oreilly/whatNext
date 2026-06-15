@@ -278,6 +278,16 @@ class GameTurn:
         room = self._get_room(room_id)
         self._validate_phase(room, GamePhase.PLAYER_INPUT, "handle input timeout")
 
+        if not room.is_input_phase_timed_out(settings.INPUT_TIMER_SECONDS):
+            logger.info(
+                f"Input timeout called for room {room_id} before the clock elapsed; ignoring"
+            )
+            return TurnResult(
+                success=True,
+                response={"status": "not_timed_out", "room_id": room_id, "phase": room.phase},
+                phase=room.phase,
+            )
+
         submitted_players = [inp.player_name for inp in room.player_inputs]
         for player in room.players:
             if player not in submitted_players and player not in room.timed_out_players:
@@ -396,6 +406,16 @@ class GameTurn:
         async with lock:
             room = self._get_room(room_id)
             self._validate_phase(room, GamePhase.VOTING, "handle voting timeout")
+
+            if not room.is_voting_phase_timed_out(settings.VOTING_TIMER_SECONDS):
+                logger.info(
+                    f"Voting timeout called for room {room_id} before the clock elapsed; ignoring"
+                )
+                return TurnResult(
+                    success=True,
+                    response={"status": "not_timed_out", "room_id": room_id, "phase": room.phase},
+                    phase=room.phase,
+                )
 
             result = self._resolve_voting_locked(room, room_id)
             winner = result.response.get("winning_player")
