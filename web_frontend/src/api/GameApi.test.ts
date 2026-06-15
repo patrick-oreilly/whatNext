@@ -107,6 +107,14 @@ describe('GameApi', () => {
       expect(mockAxios.post).toHaveBeenCalledWith('/api/input/submit', { room_id: 'ABC123', player_name: 'Alice', input_text: 'Hello' });
       expect(result).toEqual(mockResponse.data);
     });
+
+    it('should forward the player auth token when provided', async () => {
+      mockAxios.post.mockResolvedValueOnce({ data: { status: 'submitted' } });
+
+      await GameApi.submitInput({ room_id: 'ABC123', player_name: 'Alice', input_text: 'Hello', player_token: 'tok-1' });
+
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/input/submit', { room_id: 'ABC123', player_name: 'Alice', input_text: 'Hello', player_token: 'tok-1' });
+    });
   });
 
   describe('castVote', () => {
@@ -118,6 +126,14 @@ describe('GameApi', () => {
 
       expect(mockAxios.post).toHaveBeenCalledWith('/api/voting/cast', { room_id: 'ABC123', voter: 'Alice', chosen_player: 'Bob' });
       expect(result).toEqual(mockResponse.data);
+    });
+
+    it('should forward the player auth token when provided', async () => {
+      mockAxios.post.mockResolvedValueOnce({ data: { status: 'voted' } });
+
+      await GameApi.castVote({ room_id: 'ABC123', voter: 'Alice', chosen_player: 'Bob', player_token: 'tok-1' });
+
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/voting/cast', { room_id: 'ABC123', voter: 'Alice', chosen_player: 'Bob', player_token: 'tok-1' });
     });
   });
 

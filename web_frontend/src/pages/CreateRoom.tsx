@@ -13,6 +13,7 @@ import { StoryLineType, STORYLINE_LABELS, STORYLINE_DESCRIPTIONS } from '../type
 export const CreateRoom: React.FC = () => {
   const navigate = useNavigate();
   const setCurrentPlayer = useGameStore((state) => state.setCurrentPlayer);
+  const setPlayerToken = useGameStore((state) => state.setPlayerToken);
   const [savedPlayerName, setSavedPlayerName] = useLocalStorage(STORAGE_KEYS.PLAYER_NAME, '');
 
   const [playerName, setPlayerName] = useState(savedPlayerName);
@@ -47,7 +48,7 @@ export const CreateRoom: React.FC = () => {
       });
 
       // Join the room
-      await GameApi.joinRoom({
+      const joinResponse = await GameApi.joinRoom({
         room_id: response.room_id,
         player_name: playerName.trim(),
       });
@@ -55,6 +56,7 @@ export const CreateRoom: React.FC = () => {
       // Save player name and set in store
       setSavedPlayerName(playerName.trim());
       setCurrentPlayer(playerName.trim());
+      setPlayerToken(joinResponse.player_token);
 
       // Navigate to lobby
       navigate(`/lobby/${response.room_id}`);

@@ -12,6 +12,10 @@ interface GameStore {
   currentPlayer: string | null;
   setCurrentPlayer: (name: string) => void;
 
+  // Per-room auth token issued at join time
+  playerToken: string | null;
+  setPlayerToken: (token: string | null) => void;
+
   // Loading states
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -29,12 +33,14 @@ export const useGameStore = create<GameStore>((set) => ({
   // Initial state
   roomState: null,
   currentPlayer: null,
+  playerToken: null,
   isLoading: false,
   error: null,
 
   // Setters
   setRoomState: (state) => set({ roomState: state }),
   setCurrentPlayer: (name) => set({ currentPlayer: name }),
+  setPlayerToken: (token) => set({ playerToken: token }),
   setIsLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
 
@@ -42,6 +48,7 @@ export const useGameStore = create<GameStore>((set) => ({
   reset: () => set({
     roomState: null,
     currentPlayer: null,
+    playerToken: null,
     isLoading: false,
     error: null,
   }),

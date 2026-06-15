@@ -32,6 +32,7 @@ vi.mock('../../store/gameStore', () => ({
   useGameStore: vi.fn(() => ({
     roomState: mockRoomState,
     currentPlayer: 'Alice',
+    playerToken: 'token-alice',
   })),
 }));
 
@@ -100,7 +101,7 @@ describe('PlayerInputPhase', () => {
     expect(submitBtn).toHaveProperty('disabled', true);
   });
 
-  it('calls GameApi.submitInput on submit', async () => {
+  it('calls GameApi.submitInput on submit, forwarding the auth token', async () => {
     render(<PlayerInputPhase />);
 
     const textarea = screen.getByPlaceholderText('Describe what happens next in the story...');
@@ -114,6 +115,7 @@ describe('PlayerInputPhase', () => {
         room_id: 'TEST123',
         player_name: 'Alice',
         input_text: 'This is my story input',
+        player_token: 'token-alice',
       });
     });
   });
