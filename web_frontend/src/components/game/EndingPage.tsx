@@ -11,12 +11,18 @@ import { markdownComponents } from './markdownComponents';
 export const EndingPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { roomState } = useGameStore();
+  const { roomState, currentPlayer, playerToken } = useGameStore();
+
+  // Only the host finalizes the game (disposes the AI session); every other
+  // player just navigates to the results, since the room is already GAME_OVER.
+  const isHost = !!currentPlayer && roomState?.players?.[0] === currentPlayer;
 
   const handleEndGame = async () => {
     if (!roomId) return;
     try {
-      await GameApi.endGame(roomId);
+      if (isHost) {
+        await GameApi.endGame(roomId, playerToken);
+      }
       navigate(`/gameover/${roomId}`);
     } catch (e) {
       console.error('Failed to end game:', e);

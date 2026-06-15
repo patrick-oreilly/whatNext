@@ -16,7 +16,7 @@ import { AlertTriangle } from 'lucide-react';
 export const Lobby: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { roomState, setRoomState, currentPlayer } = useGameStore();
+  const { roomState, setRoomState, currentPlayer, playerToken } = useGameStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export const Lobby: React.FC = () => {
     if (!roomId) return;
 
     try {
-      await GameApi.startGame(roomId);
+      await GameApi.startGame(roomId, playerToken);
       // State will be updated by polling, which will trigger navigation
     } catch (error) {
       if (error instanceof Error) {

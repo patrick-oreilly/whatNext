@@ -102,6 +102,21 @@ def _consume_directives(result, room_id: str = ""):
         session_manager.close_session(room_id)
 
 
+def _require_member_token(room, player_token: str) -> None:
+    """Authorize an action available to any player in the room."""
+    if not player_token or player_token not in room.player_tokens.values():
+        raise HTTPException(status_code=403, detail="A valid player token is required")
+
+
+def _require_host_token(room, player_token: str) -> None:
+    """Authorize a privileged action restricted to the host (first player)."""
+    if not room.players:
+        raise HTTPException(status_code=403, detail="Room has no host")
+    host = room.players[0]
+    if not player_token or room.player_tokens.get(host) != player_token:
+        raise HTTPException(status_code=403, detail="Only the host can perform this action")
+
+
 # ------------------------------------------------------------------
 # Health and status endpoints
 # ------------------------------------------------------------------
@@ -168,9 +183,10 @@ async def join_room(request: JoinRoomRequest):
 
 
 @app.post("/api/rooms/{room_id}/start")
-async def start_game(room_id: str):
+async def start_game(room_id: str, player_token: str = None):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
+        _require_host_token(room_manager.get_room(room_id), player_token)
         result = game_turn.start_game(room_id)
 
     if result.directive == TurnDirective.CREATE_SESSION:
@@ -197,10 +213,11 @@ async def get_input_timer(room_id: str):
 
 
 @app.post("/api/rooms/{room_id}/timeout")
-async def trigger_input_timeout(room_id: str):
+async def trigger_input_timeout(room_id: str, player_token: str = None):
     logger.info(f"Input timeout triggered for room {room_id}")
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
+        _require_member_token(room_manager.get_room(room_id), player_token)
         result = game_turn.handle_input_timeout(room_id)
     return result.response
 
@@ -212,9 +229,12 @@ async def get_voting_timer(room_id: str):
 
 
 @app.delete("/api/rooms/{room_id}")
-async def delete_room(room_id: str):
-    session_manager.close_session(room_id)
-    room_manager.delete_room(room_id)
+async def delete_room(room_id: str, player_token: str = None):
+    lock = await room_manager.get_room_lock(room_id)
+    async with lock:
+        _require_host_token(room_manager.get_room(room_id), player_token)
+        session_manager.close_session(room_id)
+        room_manager.delete_room(room_id)
     logger.info(f"Deleted room {room_id}")
     return {"status": "deleted", "room_id": room_id}
 
@@ -265,16 +285,18 @@ async def get_voting_results(room_id: str):
 
 
 @app.post("/api/voting/{room_id}/timeout")
-async def trigger_voting_timeout(room_id: str):
+async def trigger_voting_timeout(room_id: str, player_token: str = None):
+    _require_member_token(room_manager.get_room(room_id), player_token)
     result = await game_turn.handle_voting_timeout(room_id)
     logger.info(f"Voting timeout handled in room {room_id}")
     return result.response
 
 
 @app.post("/api/turn/advance/{room_id}")
-async def advance_turn(room_id: str):
+async def advance_turn(room_id: str, player_token: str = None):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
+        _require_member_token(room_manager.get_room(room_id), player_token)
         result = game_turn.advance_turn(room_id)
     _consume_directives(result, room_id)
     return result.response
@@ -421,9 +443,10 @@ async def stream_story(room_id: str):
 # ------------------------------------------------------------------
 
 @app.post("/api/game/end/{room_id}")
-async def end_game(room_id: str):
+async def end_game(room_id: str, player_token: str = None):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
+        _require_host_token(room_manager.get_room(room_id), player_token)
         result = game_turn.end_game(room_id)
     _consume_directives(result, room_id)
     logger.info(f"Game ended for room {room_id}")

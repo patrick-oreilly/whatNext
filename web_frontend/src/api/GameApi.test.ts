@@ -71,6 +71,14 @@ describe('GameApi', () => {
       expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/start');
       expect(result).toEqual(mockResponse.data);
     });
+
+    it('should append the host token when provided', async () => {
+      mockAxios.post.mockResolvedValueOnce({ data: { status: 'started' } });
+
+      await GameApi.startGame('ABC123', 'host-tok');
+
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/start?player_token=host-tok');
+    });
   });
 
   describe('getRoomState', () => {
@@ -158,6 +166,14 @@ describe('GameApi', () => {
 
       expect(mockAxios.post).toHaveBeenCalledWith('/api/turn/advance/ABC123');
       expect(result).toEqual(mockResponse.data);
+    });
+
+    it('should append the member token when provided', async () => {
+      mockAxios.post.mockResolvedValueOnce({ data: { status: 'turn_advanced' } });
+
+      await GameApi.advanceTurn('ABC123', 'mem-tok');
+
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/turn/advance/ABC123?player_token=mem-tok');
     });
   });
 

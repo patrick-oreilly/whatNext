@@ -93,7 +93,7 @@ export const VotingPhase: React.FC = () => {
       // Check current phase before calling timeout
       const updatedRoom = await GameApi.getRoomState(roomId);
       if (updatedRoom.phase === GamePhase.VOTING) {
-        await GameApi.triggerVotingTimeout(roomId);
+        await GameApi.triggerVotingTimeout(roomId, playerToken);
         await fetchVotingResults();
       }
     } catch {
@@ -106,7 +106,7 @@ export const VotingPhase: React.FC = () => {
     try {
       setShowResults(false);
       setVotingResults(null);
-      await GameApi.advanceTurn(roomId);
+      await GameApi.advanceTurn(roomId, playerToken);
       // Polling in Game.tsx picks up the new state
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to advance turn');
