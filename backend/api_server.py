@@ -45,6 +45,7 @@ async def cleanup_task():
             deleted_ids = room_manager.cleanup_idle_rooms()
             for room_id in deleted_ids:
                 session_manager.close_session(room_id)
+                await purge_active_streams(room_id)
             if deleted_ids:
                 logger.info(f"Background cleanup: removed {len(deleted_ids)} idle rooms")
         except Exception as e:
@@ -241,6 +242,7 @@ async def delete_room(room_id: str, player_token: str = Body(default=None, embed
         _require_host_token(room_manager.get_room(room_id), player_token)
         session_manager.close_session(room_id)
         room_manager.delete_room(room_id)
+    await purge_active_streams(room_id)
     logger.info(f"Deleted room {room_id}")
     return {"status": "deleted", "room_id": room_id}
 
@@ -314,6 +316,21 @@ async def advance_turn(room_id: str, player_token: str = Body(default=None, embe
 
 active_streams = {}
 active_streams_lock = asyncio.Lock()
+
+
+async def purge_active_streams(room_id: str) -> int:
+    """Remove any cached stream entries for a room (all turns) on teardown.
+
+    Stream keys are ``{room_id}_turn_{turn}``. The per-stream ``finally`` only
+    runs when its generator completes, so a room torn down mid-stream (or whose
+    generator is abandoned) can leave entries behind — purge them explicitly.
+    """
+    prefix = f"{room_id}_turn_"
+    async with active_streams_lock:
+        stale_keys = [k for k in active_streams if k.startswith(prefix)]
+        for key in stale_keys:
+            del active_streams[key]
+    return len(stale_keys)
 
 
 @app.get("/api/story/stream/{room_id}")
@@ -485,6 +502,7 @@ async def trigger_cleanup():
     deleted_ids = room_manager.cleanup_idle_rooms()
     for room_id in deleted_ids:
         session_manager.close_session(room_id)
+        await purge_active_streams(room_id)
     return {
         "status": "complete",
         "rooms_deleted": len(deleted_ids)

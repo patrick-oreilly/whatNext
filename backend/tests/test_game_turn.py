@@ -128,6 +128,24 @@ class TestRoomManagerCRUD:
         with pytest.raises(Exception):
             room_manager.get_room(room_id)
 
+    @pytest.mark.asyncio
+    async def test_room_locks_cleaned_up_on_delete(self, room_manager):
+        """_room_locks entry is removed when a room is deleted."""
+        room_id = room_manager.create_room(StoryLineType.HOOP_DREAMS)
+        await room_manager.get_room_lock(room_id)
+        assert room_id in room_manager._room_locks
+        room_manager.delete_room(room_id)
+        assert room_id not in room_manager._room_locks
+
+    @pytest.mark.asyncio
+    async def test_room_locks_does_not_grow_unbounded(self, room_manager):
+        """Creating and deleting N rooms leaves _room_locks empty."""
+        for _ in range(20):
+            room_id = room_manager.create_room(StoryLineType.HOOP_DREAMS)
+            await room_manager.get_room_lock(room_id)
+            room_manager.delete_room(room_id)
+        assert len(room_manager._room_locks) == 0
+
     def test_no_game_logic_methods(self, room_manager):
         forbidden = [
             "start_game", "advance_turn", "set_phase",
