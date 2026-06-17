@@ -235,7 +235,7 @@ async def get_voting_timer(room_id: str):
 
 
 @app.delete("/api/rooms/{room_id}")
-async def delete_room(room_id: str, player_token: str = None):
+async def delete_room(room_id: str, player_token: str = Body(default=None, embed=True)):
     lock = await room_manager.get_room_lock(room_id)
     async with lock:
         _require_host_token(room_manager.get_room(room_id), player_token)
