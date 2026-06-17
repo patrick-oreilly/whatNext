@@ -168,6 +168,9 @@ class GameTurn:
         room = self._get_room(room_id)
         self._validate_phase(room, GamePhase.VOTING, "vote")
 
+        if room.winner_resolved_turn == room.turn:
+            raise VotingError("Voting is closed")
+
         if voter not in room.players:
             raise PlayerNotInRoomError(f"Voter '{voter}' not in room {room_id}")
 
@@ -209,7 +212,7 @@ class GameTurn:
     # resolve_voting / voting results
     # ------------------------------------------------------------------
 
-    def _resolve_voting_locked(self, room: GameRoom, room_id: str) -> TurnResult:
+    def _close_voting_locked(self, room: GameRoom, room_id: str) -> TurnResult:
         if not room.player_inputs:
             raise VotingError("No player inputs to vote on")
 
@@ -267,10 +270,47 @@ class GameTurn:
         lock = await self.room_manager.get_room_lock(room_id)
         async with lock:
             room = self._get_room(room_id)
-            return self._resolve_voting_locked(room, room_id)
+            return self._close_voting_locked(room, room_id)
+
+    def _compute_provisional_tally(self, room: GameRoom, room_id: str) -> TurnResult:
+        if not room.player_inputs:
+            raise VotingError("No player inputs to vote on")
+
+        max_votes = max(inp.votes for inp in room.player_inputs)
+        tied_inputs = [inp for inp in room.player_inputs if inp.votes == max_votes]
+        was_tie = len(tied_inputs) > 1
+        tied_player_names = [inp.player_name for inp in tied_inputs]
+
+        if room.winner_resolved_turn == room.turn and room.winning_player:
+            winning_input = next(
+                (inp for inp in tied_inputs if inp.player_name == room.winning_player),
+                tied_inputs[0]
+            )
+        else:
+            winning_input = tied_inputs[0]
+
+        vote_counts = {inp.player_name: inp.votes for inp in room.player_inputs}
+
+        results = VotingResultsResponse(
+            room_id=room_id,
+            winning_player=winning_input.player_name,
+            winning_input=winning_input.text,
+            vote_counts=vote_counts,
+            was_tie=was_tie,
+            tied_players=tied_player_names
+        )
+
+        return TurnResult(
+            success=True,
+            response=results.model_dump(),
+            phase=room.phase
+        )
 
     async def get_voting_results(self, room_id: str) -> TurnResult:
-        return await self.resolve_voting(room_id)
+        lock = await self.room_manager.get_room_lock(room_id)
+        async with lock:
+            room = self._get_room(room_id)
+            return self._compute_provisional_tally(room, room_id)
 
     # ------------------------------------------------------------------
     # handle_input_timeout
@@ -403,13 +443,27 @@ class GameTurn:
     # handle_voting_timeout
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _all_eligible_voted(room: GameRoom) -> bool:
+        eligible = [p for p in room.players if p not in room.timed_out_players]
+        if not eligible:
+            return False
+        all_voters = set()
+        for inp in room.player_inputs:
+            if hasattr(inp, 'voters'):
+                all_voters.update(inp.voters)
+        return set(eligible) == all_voters
+
     async def handle_voting_timeout(self, room_id: str) -> TurnResult:
         lock = await self.room_manager.get_room_lock(room_id)
         async with lock:
             room = self._get_room(room_id)
             self._validate_phase(room, GamePhase.VOTING, "handle voting timeout")
 
-            if not room.is_voting_phase_timed_out(settings.VOTING_TIMER_SECONDS):
+            timed_out = room.is_voting_phase_timed_out(settings.VOTING_TIMER_SECONDS)
+            all_voted = self._all_eligible_voted(room)
+
+            if not timed_out and not all_voted:
                 logger.info(
                     f"Voting timeout called for room {room_id} before the clock elapsed; ignoring"
                 )
@@ -419,7 +473,7 @@ class GameTurn:
                     phase=room.phase,
                 )
 
-            result = self._resolve_voting_locked(room, room_id)
+            result = self._close_voting_locked(room, room_id)
             winner = result.response.get("winning_player")
             vote_counts = result.response.get("vote_counts")
 
@@ -473,7 +527,7 @@ class GameTurn:
         if room.story_has_ended:
             logger.info(f"Story already ended in room {room_id}, transitioning to GAME_OVER")
             if room.player_inputs:
-                self._resolve_voting_locked(room, room_id)
+                self._close_voting_locked(room, room_id)
             room.phase = GamePhase.GAME_OVER
             room.update_activity()
             self._save_room(room)
@@ -486,7 +540,7 @@ class GameTurn:
 
         winning_input_text = None
         if room.player_inputs:
-            result = self._resolve_voting_locked(room, room_id)
+            result = self._close_voting_locked(room, room_id)
             winning_input_text = result.response.get("winning_input")
 
         room.turn += 1

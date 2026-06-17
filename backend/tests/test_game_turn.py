@@ -147,6 +147,30 @@ class TestRoomManagerCRUD:
             room_manager.delete_room(room_id)
         assert len(room_manager._room_locks) == 0
 
+    @pytest.mark.asyncio
+    async def test_cleanup_idle_rooms_removes_lock_entries(self, room_manager):
+        room_id = room_manager.create_room(StoryLineType.HOOP_DREAMS)
+        await room_manager.get_room_lock(room_id)
+        assert room_id in room_manager._room_locks
+
+        room = room_manager.get_room(room_id)
+        room.last_activity = datetime(2020, 1, 1)
+        room_manager.save_room(room)
+
+        deleted = room_manager.cleanup_idle_rooms()
+        assert room_id in deleted
+        assert room_id not in room_manager._room_locks
+
+    @pytest.mark.asyncio
+    async def test_remove_last_player_removes_lock_entry(self, room_manager):
+        room_id = room_manager.create_room(StoryLineType.HOOP_DREAMS)
+        room_manager.add_player(room_id, "Alice")
+        await room_manager.get_room_lock(room_id)
+        assert room_id in room_manager._room_locks
+
+        room_manager.remove_player(room_id, "Alice")
+        assert room_id not in room_manager._room_locks
+
     def test_no_game_logic_methods(self, room_manager):
         forbidden = [
             "start_game", "advance_turn", "set_phase",
@@ -639,6 +663,112 @@ class TestVoting:
         result = await game_turn.handle_voting_timeout(populated_room)
         assert result.response["status"] == "timeout_handled"
         assert "winner" in result.response
+
+    @pytest.mark.asyncio
+    async def test_get_voting_results_is_read_only(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.turn = 1
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=2, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=0, voters=[]),
+        ]
+        room_manager.save_room(room)
+
+        result = await game_turn.get_voting_results(populated_room)
+        assert result.success is True
+        assert "winning_player" in result.response
+        assert "vote_counts" in result.response
+
+        updated = room_manager.get_room(populated_room)
+        assert updated.winner_resolved_turn is None, "get_voting_results must not freeze winner"
+        assert updated.winning_player is None, "get_voting_results must not set winning_player"
+        assert updated.points_awarded_turn is None, "get_voting_results must not award points"
+        assert updated.scores == {"Alice": 0, "Bob": 0}, "get_voting_results must not mutate scores"
+
+    @pytest.mark.asyncio
+    async def test_cast_vote_rejected_after_voting_closed(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.turn = 1
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=1, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=0, voters=[]),
+        ]
+        room_manager.save_room(room)
+
+        await game_turn.resolve_voting(populated_room)
+
+        from backend.core.errors import VotingError
+        with pytest.raises(VotingError, match="Voting is closed"):
+            game_turn.cast_vote(populated_room, "Bob", "Alice")
+
+    @pytest.mark.asyncio
+    async def test_handle_voting_timeout_closes_when_all_eligible_voted(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.turn = 1
+        room.voting_phase_start_time = datetime.now()
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=1, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=1, voters=["Alice"]),
+        ]
+        room_manager.save_room(room)
+
+        result = await game_turn.handle_voting_timeout(populated_room)
+
+        assert result.response["status"] == "timeout_handled"
+        updated = room_manager.get_room(populated_room)
+        assert updated.winner_resolved_turn == 1, "winner should be frozen when all voted"
+        assert updated.points_awarded_turn == 1, "points should be awarded when all voted"
+
+    @pytest.mark.asyncio
+    async def test_winner_and_tally_freeze_together_on_advance(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        preturn = room.turn
+        room.phase = GamePhase.VOTING
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=2, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=0, voters=[]),
+        ]
+        room_manager.save_room(room)
+
+        result = game_turn.advance_turn(populated_room)
+        assert result.response["status"] == "turn_advanced"
+
+        updated = room_manager.get_room(populated_room)
+        assert updated.winner_resolved_turn == preturn, "winner must be frozen for the turn it closed"
+        assert updated.points_awarded_turn == preturn, "points must be frozen for the same turn as winner"
+        assert updated.winning_player == "Alice", "clear winner should be frozen"
+        assert updated.scores["Alice"] == 30, "points should be awarded (2 votes * 15)"
+
+    @pytest.mark.asyncio
+    async def test_vote_path_and_timeout_path_produce_identical_winner(self, game_turn, room_manager, populated_room):
+        game_turn.start_game(populated_room)
+        room = room_manager.get_room(populated_room)
+        room.phase = GamePhase.VOTING
+        room.turn = 1
+        room.voting_phase_start_time = datetime(2020, 1, 1)
+        room.player_inputs = [
+            PlayerInput(player_name="Alice", text="A", votes=1, voters=["Bob"]),
+            PlayerInput(player_name="Bob", text="B", votes=1, voters=["Alice"]),
+        ]
+        room_manager.save_room(room)
+
+        result_timeout = await game_turn.handle_voting_timeout(populated_room)
+        winner_from_timeout = result_timeout.response["winner"]
+
+        result_advance = game_turn.advance_turn(populated_room)
+        updated = room_manager.get_room(populated_room)
+
+        assert updated.winning_player == winner_from_timeout, (
+            f"timeout winner {winner_from_timeout} must match advance frozen winner {updated.winning_player}"
+        )
+        assert result_advance.response["status"] == "turn_advanced"
 
     @pytest.mark.asyncio
     async def test_handle_voting_timeout_premature_is_noop(self, game_turn, room_manager, populated_room):
