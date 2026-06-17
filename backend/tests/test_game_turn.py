@@ -147,6 +147,30 @@ class TestRoomManagerCRUD:
             room_manager.delete_room(room_id)
         assert len(room_manager._room_locks) == 0
 
+    @pytest.mark.asyncio
+    async def test_cleanup_idle_rooms_removes_lock_entries(self, room_manager):
+        room_id = room_manager.create_room(StoryLineType.HOOP_DREAMS)
+        await room_manager.get_room_lock(room_id)
+        assert room_id in room_manager._room_locks
+
+        room = room_manager.get_room(room_id)
+        room.last_activity = datetime(2020, 1, 1)
+        room_manager.save_room(room)
+
+        deleted = room_manager.cleanup_idle_rooms()
+        assert room_id in deleted
+        assert room_id not in room_manager._room_locks
+
+    @pytest.mark.asyncio
+    async def test_remove_last_player_removes_lock_entry(self, room_manager):
+        room_id = room_manager.create_room(StoryLineType.HOOP_DREAMS)
+        room_manager.add_player(room_id, "Alice")
+        await room_manager.get_room_lock(room_id)
+        assert room_id in room_manager._room_locks
+
+        room_manager.remove_player(room_id, "Alice")
+        assert room_id not in room_manager._room_locks
+
     def test_no_game_logic_methods(self, room_manager):
         forbidden = [
             "start_game", "advance_turn", "set_phase",
