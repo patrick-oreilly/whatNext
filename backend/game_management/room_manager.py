@@ -163,7 +163,8 @@ class RoomManager:
             voting_phase_start_time=room.voting_phase_start_time,
             timed_out_players=room.timed_out_players,
             story_has_ended=room.story_has_ended,
-            voting_timeout_seconds=settings.VOTING_TIMER_SECONDS
+            voting_timeout_seconds=settings.VOTING_TIMER_SECONDS,
+            input_timeout_seconds=settings.INPUT_TIMER_SECONDS
         )
 
     # ------------------------------------------------------------------

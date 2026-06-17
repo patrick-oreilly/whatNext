@@ -25,6 +25,7 @@ const { mockRoomState } = vi.hoisted(() => ({
     }>,
     max_turns: 10,
     input_phase_start_time: new Date().toISOString(),
+    input_timeout_seconds: 120 as number,
   },
 }));
 
@@ -151,10 +152,28 @@ describe('PlayerInputPhase', () => {
     try {
       render(<PlayerInputPhase />);
       await waitFor(() => {
-        expect(mockTriggerInputTimeout).toHaveBeenCalledWith('TEST123');
+        expect(mockTriggerInputTimeout).toHaveBeenCalledWith('TEST123', 'token-alice');
       });
     } finally {
       mockRoomState.input_phase_start_time = original;
+    }
+  });
+
+  it('honors the backend input_timeout_seconds rather than a hardcoded 120s', async () => {
+    const originalStart = mockRoomState.input_phase_start_time;
+    const originalTimeout = mockRoomState.input_timeout_seconds;
+    // Phase started 40s ago. Under the old hardcoded 120s limit this would NOT
+    // time out; with the backend value of 30s it must.
+    mockRoomState.input_phase_start_time = new Date(Date.now() - 40_000).toISOString();
+    mockRoomState.input_timeout_seconds = 30;
+    try {
+      render(<PlayerInputPhase />);
+      await waitFor(() => {
+        expect(mockTriggerInputTimeout).toHaveBeenCalledWith('TEST123', 'token-alice');
+      });
+    } finally {
+      mockRoomState.input_phase_start_time = originalStart;
+      mockRoomState.input_timeout_seconds = originalTimeout;
     }
   });
 });

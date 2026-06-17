@@ -55,6 +55,7 @@ export interface RoomStateResponse {
   input_phase_start_time?: string | null;
   voting_phase_start_time?: string | null;  // NEW: For voting timer
   voting_timeout_seconds?: number;
+  input_timeout_seconds?: number;
   timed_out_players?: string[];
   story_has_ended?: boolean;
 }
