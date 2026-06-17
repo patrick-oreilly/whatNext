@@ -8,6 +8,7 @@ one generation while every caller still receives the story.
 import asyncio
 import json
 import pytest
+from datetime import datetime
 
 import backend.api_server as s
 from backend.core.models import GamePhase, StoryLineType
@@ -136,4 +137,25 @@ async def test_active_streams_does_not_grow_unbounded():
         s.active_streams[f"{room_id}_turn_1"] = {"event": asyncio.Event(), "response": [], "error": None}
         await s.purge_active_streams(room_id)
         s.room_manager.delete_room(room_id)
+    assert len(s.active_streams) == initial_count
+
+
+@pytest.mark.asyncio
+async def test_active_streams_purged_on_idle_cleanup():
+    """active_streams entries are purged when rooms are cleaned up via
+    cleanup_idle_rooms + purge_active_streams (the background cleanup path)."""
+    initial_count = len(s.active_streams)
+    room_id = s.room_manager.create_room(StoryLineType.HOOP_DREAMS)
+    s.active_streams[f"{room_id}_turn_1"] = {"event": asyncio.Event(), "response": [], "error": None}
+
+    room = s.room_manager.get_room(room_id)
+    room.last_activity = datetime(2020, 1, 1)
+    s.room_manager.save_room(room)
+
+    deleted_ids = s.room_manager.cleanup_idle_rooms()
+    assert room_id in deleted_ids
+    for rid in deleted_ids:
+        await s.purge_active_streams(rid)
+
+    assert f"{room_id}_turn_1" not in s.active_streams
     assert len(s.active_streams) == initial_count
