@@ -111,3 +111,82 @@ async def test_input_timeout_requires_member_token():
     with pytest.raises(HTTPException) as exc:
         await s.trigger_input_timeout(room_id, player_token=None)
     assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_voting_timeout_requires_member_token():
+    room_id, _host, _member = await _room_with_players()
+    room = s.room_manager.get_room(room_id)
+    room.phase = GamePhase.VOTING
+    s.room_manager.save_room(room)
+
+    with pytest.raises(HTTPException) as exc:
+        await s.trigger_voting_timeout(room_id, player_token="not-a-real-token")
+    assert exc.value.status_code == 403
+
+
+# -- Host token assignment & succession --------------------------------------
+
+@pytest.mark.asyncio
+async def test_first_join_sets_host_token():
+    room_id = s.room_manager.create_room(StoryLineType.HOOP_DREAMS, max_turns=5)
+    host = await s.join_room(JoinRoomRequest(room_id=room_id, player_name="Alice"))
+
+    room = s.room_manager.get_room(room_id)
+    assert room.host_token == host.player_token
+
+
+@pytest.mark.asyncio
+async def test_second_join_does_not_change_host_token():
+    room_id, host_token, member_token = await _room_with_players()
+    room = s.room_manager.get_room(room_id)
+
+    assert room.host_token == host_token
+    assert room.host_token != member_token
+
+
+@pytest.mark.asyncio
+async def test_host_leaving_promotes_next_player():
+    room_id, host_token, member_token = await _room_with_players()
+
+    # Host (Alice, players[0]) leaves; Bob should be promoted.
+    s.room_manager.remove_player(room_id, "Alice")
+
+    room = s.room_manager.get_room(room_id)
+    assert room.players[0] == "Bob"
+    assert room.host_token == member_token
+
+    # The new host can now start the game; the old host token is rejected.
+    with pytest.raises(HTTPException) as exc:
+        s._require_host_token(room, host_token)
+    assert exc.value.status_code == 403
+    s._require_host_token(room, member_token)  # does not raise
+
+
+@pytest.mark.asyncio
+async def test_non_host_member_leaving_keeps_host_token():
+    room_id, host_token, _member = await _room_with_players()
+
+    # Bob (non-host) leaves; Alice remains host.
+    s.room_manager.remove_player(room_id, "Bob")
+
+    room = s.room_manager.get_room(room_id)
+    assert room.players[0] == "Alice"
+    assert room.host_token == host_token
+
+
+@pytest.mark.asyncio
+async def test_require_host_token_uses_stored_host_token():
+    """Auth must key off host_token, not merely players[0]'s token."""
+    room_id, host_token, member_token = await _room_with_players()
+    room = s.room_manager.get_room(room_id)
+
+    # Reorder players so players[0] is no longer the host; auth must still
+    # honour the stored host_token rather than the seat order.
+    room.players = ["Bob", "Alice"]
+    s.room_manager.save_room(room)
+
+    s._require_host_token(room, host_token)  # Alice still host -> ok
+    with pytest.raises(HTTPException) as exc:
+        s._require_host_token(room, member_token)
+    assert exc.value.status_code == 403

@@ -74,6 +74,7 @@ class GameRoom(BaseModel):
     players: List[str] = []
     scores: Dict[str, int] = {}
     player_tokens: Dict[str, str] = {}
+    host_token: Optional[str] = None  # Token of the host (first joiner; succeeds to players[0] on leave)
     turn: int = 0
     phase: GamePhase = GamePhase.LOBBY
     story_history: List[StorySegment] = []
