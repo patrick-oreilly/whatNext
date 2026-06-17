@@ -108,3 +108,32 @@ async def test_concurrent_streams_generate_once(streaming_room, monkeypatch):
     assert len(calls) == 1, f"expected one generation, got {len(calls)}"
     for body in bodies:
         assert "You step onto the court as the crowd roars." in _paragraph_from_sse(body)
+
+
+@pytest.mark.asyncio
+async def test_active_streams_purged_on_room_teardown():
+    """active_streams entries are purged even mid-stream when a room is deleted."""
+    room_id = s.room_manager.create_room(StoryLineType.HOOP_DREAMS)
+    s.active_streams[f"{room_id}_turn_1"] = {"event": asyncio.Event(), "response": [], "error": None}
+    s.active_streams[f"{room_id}_turn_2"] = {"event": asyncio.Event(), "response": [], "error": None}
+    assert f"{room_id}_turn_1" in s.active_streams
+    assert f"{room_id}_turn_2" in s.active_streams
+
+    purged = await s.purge_active_streams(room_id)
+    assert purged == 2
+    assert f"{room_id}_turn_1" not in s.active_streams
+    assert f"{room_id}_turn_2" not in s.active_streams
+
+    s.room_manager.delete_room(room_id)
+
+
+@pytest.mark.asyncio
+async def test_active_streams_does_not_grow_unbounded():
+    """active_streams doesn't leak entries across create/delete/stream cycles."""
+    initial_count = len(s.active_streams)
+    for _ in range(10):
+        room_id = s.room_manager.create_room(StoryLineType.HOOP_DREAMS)
+        s.active_streams[f"{room_id}_turn_1"] = {"event": asyncio.Event(), "response": [], "error": None}
+        await s.purge_active_streams(room_id)
+        s.room_manager.delete_room(room_id)
+    assert len(s.active_streams) == initial_count

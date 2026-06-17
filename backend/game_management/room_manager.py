@@ -60,6 +60,7 @@ class RoomManager:
 
     def delete_room(self, room_id: str) -> None:
         self.storage.delete_room(room_id)
+        self._room_locks.pop(room_id, None)
         logger.info(f"Deleted room {room_id}")
 
     def list_rooms(self) -> List[str]:
