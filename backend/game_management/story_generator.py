@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import List
 from backend.core.models import StoryLineType, StorySegment
 from backend.agent import prompts
@@ -192,6 +193,12 @@ class StoryGenerator:
         """
         cleaned = input_text.strip()
         cleaned = cleaned.replace('{', '').replace('}', '')
+        cleaned = re.sub(
+            r'<\s*/\s*player[\s_\-]*input\s*>',
+            '[player_input_close]',
+            cleaned,
+            flags=re.IGNORECASE
+        )
         formatted = f'<player_input>\n{cleaned}\n</player_input>'
         return formatted
     

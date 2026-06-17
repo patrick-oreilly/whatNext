@@ -49,6 +49,8 @@ class GameTurn:
             try:
                 story_data = json.loads(first_json)
                 llm_output = LlmOutput(**story_data)
+                if not llm_output.paragraph or not llm_output.paragraph.strip():
+                    raise ValueError("parsed paragraph is empty or whitespace-only")
                 logger.info(f"Parsed structured output: has_story_ended={llm_output.has_story_ended}")
                 return llm_output
             except (json.JSONDecodeError, Exception) as e:
