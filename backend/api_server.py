@@ -287,7 +287,7 @@ async def cast_vote(request: CastVoteRequest):
 
 @app.get("/api/voting/results/{room_id}")
 async def get_voting_results(room_id: str):
-    result = await game_turn.resolve_voting(room_id)
+    result = await game_turn.get_voting_results(room_id)
     logger.info(f"Voting results calculated for room {room_id}")
     return result.response
 
