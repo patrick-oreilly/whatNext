@@ -68,7 +68,7 @@ describe('GameApi', () => {
 
       const result = await GameApi.startGame('ABC123');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/start');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/start', { player_token: undefined });
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -77,7 +77,7 @@ describe('GameApi', () => {
 
       await GameApi.startGame('ABC123', 'host-tok');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/start?player_token=host-tok');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/start', { player_token: 'host-tok' });
     });
   });
 
@@ -99,7 +99,7 @@ describe('GameApi', () => {
 
       await GameApi.deleteRoom('ABC123');
 
-      expect(mockAxios.delete).toHaveBeenCalledWith('/api/rooms/ABC123');
+      expect(mockAxios.delete).toHaveBeenCalledWith('/api/rooms/ABC123', { data: { player_token: undefined } });
     });
   });
 
@@ -164,7 +164,7 @@ describe('GameApi', () => {
 
       const result = await GameApi.advanceTurn('ABC123');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/turn/advance/ABC123');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/turn/advance/ABC123', { player_token: undefined });
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -173,7 +173,7 @@ describe('GameApi', () => {
 
       await GameApi.advanceTurn('ABC123', 'mem-tok');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/turn/advance/ABC123?player_token=mem-tok');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/turn/advance/ABC123', { player_token: 'mem-tok' });
     });
   });
 
@@ -184,7 +184,7 @@ describe('GameApi', () => {
 
       const result = await GameApi.triggerInputTimeout('ABC123');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/timeout');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/rooms/ABC123/timeout', { player_token: undefined });
       expect(result).toEqual(mockResponse.data);
     });
   });
@@ -196,7 +196,7 @@ describe('GameApi', () => {
 
       const result = await GameApi.triggerVotingTimeout('ABC123');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/voting/ABC123/timeout');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/voting/ABC123/timeout', { player_token: undefined });
       expect(result).toEqual(mockResponse.data);
     });
   });
@@ -220,7 +220,7 @@ describe('GameApi', () => {
 
       const result = await GameApi.endGame('ABC123');
 
-      expect(mockAxios.post).toHaveBeenCalledWith('/api/game/end/ABC123');
+      expect(mockAxios.post).toHaveBeenCalledWith('/api/game/end/ABC123', { player_token: undefined });
       expect(result).toEqual(mockResponse.data);
     });
   });
