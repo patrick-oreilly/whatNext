@@ -127,6 +127,10 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+// Note: navigation-compose 2.8.0-alpha11 has a savedstate API incompatibility on desktop/JVM.
+// The app runs correctly on Android and iOS. Desktop support will be added when
+// a compatible navigation-compose release is available.
+
 compose.desktop {
     application {
         mainClass = "dev.johnoreilly.whatnext.mobile.MainKt"
