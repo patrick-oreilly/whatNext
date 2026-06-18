@@ -3,7 +3,6 @@ package dev.johnoreilly.whatnext.mobile
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +30,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.russhwolf.settings.Settings
 import dev.johnoreilly.whatnext.mobile.components.HeaderBar
-import dev.johnoreilly.whatnext.mobile.components.JoinGameCard
 import dev.johnoreilly.whatnext.mobile.components.Panel
 import dev.johnoreilly.whatnext.mobile.components.InGameContent
 import dev.johnoreilly.whatnext.mobile.components.GameOverContent
@@ -86,13 +84,8 @@ fun App() {
         ) {
             composable<Route.Home> {
                 HomeScreen(
-                    repository = repository,
-                    credentialStore = credentialStore,
-                    onJoined = { roomId ->
-                        navController.navigate(Route.Lobby(roomId)) {
-                            popUpTo(Route.Home) { inclusive = true }
-                        }
-                    },
+                    onCreateRoom = { navController.navigate(Route.CreateRoom) },
+                    onJoinRoom = { navController.navigate(Route.JoinRoom) },
                 )
             }
             composable<Route.Lobby> { backStackEntry ->
@@ -163,98 +156,6 @@ fun App() {
                     onJoined = { roomId ->
                         navController.navigate(Route.Lobby(roomId)) {
                             popUpTo(Route.Home) { inclusive = true }
-                        }
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HomeScreen(
-    repository: WhatNextRepository,
-    credentialStore: CredentialStore,
-    onJoined: (roomId: String) -> Unit,
-) {
-    val gameColors = LocalGameColors.current
-    var playerName by remember { mutableStateOf("") }
-    var roomCode by remember { mutableStateOf("") }
-    var joining by remember { mutableStateOf(false) }
-    var joinError by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(gameColors.surfaceNearBlack)
-            .verticalScroll(rememberScrollState())
-            .systemBarsPadding()
-            .padding(16.dp)
-    ) {
-        when {
-            joining -> {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator()
-                    Spacer(Modifier.width(12.dp))
-                    Text("Loading room…")
-                }
-            }
-            else -> {
-                JoinGameCard(
-                    name = playerName,
-                    roomCode = roomCode,
-                    onNameChange = { playerName = it },
-                    onRoomCodeChange = { roomCode = it.uppercase() },
-                    loading = joining,
-                    error = joinError,
-                    onCancel = {
-                        playerName = ""
-                        roomCode = ""
-                        joinError = null
-                    },
-                    onJoin = {
-                        val code = roomCode.trim()
-                        val name = playerName.trim()
-                        if (code.length != 6 || name.isBlank()) {
-                            joinError = "Please enter your name and a 6-character room code."
-                            return@JoinGameCard
-                        }
-                        scope.launch {
-                            joining = true
-                            joinError = null
-                            val result = runCatching { repository.joinRoom(code, name) }
-                            if (result.isSuccess) {
-                                val response = result.getOrNull()!!
-                                credentialStore.playerToken = response.playerToken
-                                credentialStore.playerName = name
-                                credentialStore.roomId = code
-                                onJoined(code)
-                            } else {
-                                joinError = result.exceptionOrNull()?.message ?: "Join failed"
-                            }
-                            joining = false
-                        }
-                    },
-                    onRejoin = {
-                        val code = roomCode.trim()
-                        val name = playerName.trim()
-                        if (code.length != 6 || name.isBlank()) {
-                            joinError = "Please enter your name and a 6-character room code."
-                            return@JoinGameCard
-                        }
-                        scope.launch {
-                            joining = true
-                            joinError = null
-                            val result = runCatching { repository.getRoomState(code) }
-                            if (result.isSuccess) {
-                                credentialStore.roomId = code
-                                credentialStore.playerName = name
-                                onJoined(code)
-                            } else {
-                                joinError = result.exceptionOrNull()?.message ?: "Rejoin failed"
-                            }
-                            joining = false
                         }
                     },
                 )
