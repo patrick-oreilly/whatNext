@@ -76,6 +76,12 @@ kotlin {
             // Ktor engine for JVM/Desktop
             implementation(libs.ktor.client.cio)
         }
+        jvmTest.dependencies {
+            implementation(libs.kotlin.test)
+            @OptIn(ExperimentalComposeLibrary::class)
+            implementation(compose.uiTest)
+            implementation(compose.desktop.uiTestJUnit4)
+        }
         iosMain.dependencies {
             // Ktor engine for iOS
             implementation(libs.ktor.client.darwin)

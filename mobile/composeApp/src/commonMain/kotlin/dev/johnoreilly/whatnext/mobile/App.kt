@@ -22,15 +22,17 @@ import dev.johnoreilly.whatnext.mobile.components.InGameContent
 import dev.johnoreilly.whatnext.mobile.components.GameOverContent
 import dev.johnoreilly.whatnext.mobile.network.RoomState
 import dev.johnoreilly.whatnext.mobile.repository.WhatNextRepository
-import dev.johnoreilly.whatnext.mobile.ui.theme.WhatNextTheme
+import dev.johnoreilly.whatnext.mobile.ui.gametheme.GameTheme
+import dev.johnoreilly.whatnext.mobile.ui.gametheme.LocalGameColors
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
 fun App() {
-    WhatNextTheme {
+    GameTheme {
         val repository = remember { WhatNextRepository() }
+        val gameColors = LocalGameColors.current
 
         // State for join + room state
         var playerName by remember { mutableStateOf("") }
@@ -47,7 +49,7 @@ fun App() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(brush = Brush.horizontalGradient(listOf(Color(0xFFEA580C), Color(0xFFB45309))))
+                .background(gameColors.surfaceNearBlack)
                 .verticalScroll(rememberScrollState())
                 .systemBarsPadding()
                 .padding(16.dp)
