@@ -73,7 +73,9 @@ fun App() {
                 }
                 is AutoRejoinResult.ShowHomeWithMessage,
                 is AutoRejoinResult.NoCredentials -> {
-                    navController.navigate(Route.Home)
+                    navController.navigate(Route.Home) {
+                        popUpTo(Route.Home) { inclusive = true }
+                    }
                 }
             }
         }
@@ -599,19 +601,5 @@ private fun CreateRoomScreen(
                 Text(if (uiState.isCreating) "CREATING…" else "CREATE ROOM")
             }
         }
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(title: String) {
-    val gameColors = LocalGameColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(gameColors.surfaceNearBlack)
-            .systemBarsPadding(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(title, color = Color.White)
     }
 }
