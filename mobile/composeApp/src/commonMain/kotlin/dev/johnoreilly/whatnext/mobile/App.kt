@@ -46,6 +46,7 @@ import io.github.patrickoreilly.whatnext.mobile.settings.CredentialStore
 import io.github.patrickoreilly.whatnext.mobile.state.RoomStateHolder
 import io.github.patrickoreilly.whatnext.mobile.viewmodel.CreateRoomEvent
 import io.github.patrickoreilly.whatnext.mobile.viewmodel.CreateRoomViewModel
+import io.github.patrickoreilly.whatnext.mobile.viewmodel.JoinRoomViewModel
 import io.github.patrickoreilly.whatnext.mobile.viewmodel.LobbyEvent
 import io.github.patrickoreilly.whatnext.mobile.viewmodel.LobbyViewModel
 import io.github.patrickoreilly.whatnext.mobile.viewmodel.StorylineOption
@@ -146,7 +147,25 @@ fun App() {
                 )
             }
             composable<Route.JoinRoom> {
-                PlaceholderScreen("Join Room")
+                val joinViewModel = remember {
+                    JoinRoomViewModel(
+                        joinRoom = { roomId, playerName -> repository.joinRoom(roomId, playerName) },
+                        onCredentialsStored = { token, name, room ->
+                            credentialStore.playerToken = token
+                            credentialStore.playerName = name
+                            credentialStore.roomId = room
+                        },
+                    )
+                }
+                JoinRoomScreen(
+                    viewModel = joinViewModel,
+                    onCancel = { navController.popBackStack() },
+                    onJoined = { roomId ->
+                        navController.navigate(Route.Lobby(roomId)) {
+                            popUpTo(Route.Home) { inclusive = true }
+                        }
+                    },
+                )
             }
         }
     }
