@@ -1,38 +1,34 @@
 package dev.johnoreilly.whatnext.mobile.repository
 
-import dev.johnoreilly.whatnext.mobile.network.RoomResult
-import dev.johnoreilly.whatnext.mobile.network.RoomState
-import dev.johnoreilly.whatnext.mobile.network.WhatNextApi
+import dev.johnoreilly.whatnext.mobile.network.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
-/**
- * Simple repository wrapper around [WhatNextApi].
- * Provides a clean API for the UI layer.
- */
-class WhatNextRepository(
-    private val api: WhatNextApi = WhatNextApi()
-) {
-    suspend fun getRooms(): RoomResult = api.fetchRooms()
-    suspend fun getRoomState(roomId: String): RoomState = api.fetchRoomState(roomId)
-    suspend fun joinRoom(roomId: String, playerName: String) = api.joinRoom(roomId, playerName)
-    suspend fun submitInput(roomId: String, playerName: String, inputText: String) =
-        api.submitInput(roomId, playerName, inputText)
+class WhatNextRepository(private val api: WhatNextApi = WhatNextApi()) {
+    suspend fun getRooms(): RoomResult = api.listRooms()
+    suspend fun createRoom(storyline: String, maxTurns: Int): CreateRoomResponse = api.createRoom(storyline, maxTurns)
+    suspend fun joinRoom(roomId: String, playerName: String): JoinRoomResponse = api.joinRoom(roomId, playerName)
+    suspend fun startGame(roomId: String, playerToken: String? = null): StartGameResponse = api.startGame(roomId, playerToken)
+    suspend fun getRoomState(roomId: String): RoomState = api.getRoomState(roomId)
+    suspend fun deleteRoom(roomId: String, playerToken: String? = null) = api.deleteRoom(roomId, playerToken)
+    suspend fun submitInput(roomId: String, playerName: String, inputText: String, playerToken: String? = null): SubmitInputResponse = api.submitInput(roomId, playerName, inputText, playerToken)
+    suspend fun castVote(roomId: String, voter: String, chosenPlayer: String, playerToken: String? = null): CastVoteResponse = api.castVote(roomId, voter, chosenPlayer, playerToken)
+    suspend fun getVotingResults(roomId: String): VotingResultsResponse = api.getVotingResults(roomId)
+    suspend fun advanceTurn(roomId: String, playerToken: String? = null): AdvanceTurnResponse = api.advanceTurn(roomId, playerToken)
+    suspend fun getTimerStatus(roomId: String): TimerStatusResponse = api.getTimerStatus(roomId)
+    suspend fun getVotingTimer(roomId: String): TimerStatusResponse = api.getVotingTimer(roomId)
+    suspend fun triggerInputTimeout(roomId: String, playerToken: String? = null): TriggerTimeoutResponse = api.triggerInputTimeout(roomId, playerToken)
+    suspend fun triggerVotingTimeout(roomId: String, playerToken: String? = null): TriggerVotingTimeoutResponse = api.triggerVotingTimeout(roomId, playerToken)
+    suspend fun endGame(roomId: String, playerToken: String? = null): EndGameResponse = api.endGame(roomId, playerToken)
+    fun createStoryStream(roomId: String): Flow<StoryStreamEvent> = api.createStoryStream(roomId)
 
-    suspend fun startRoom(roomId: String) = api.startRoom(roomId)
+    @Deprecated("Use startGame", ReplaceWith("startGame(roomId, playerToken)"))
+    suspend fun startRoom(roomId: String) = api.startGame(roomId)
 
-    /**
-     * Polls the room state every [intervalMs] milliseconds and emits the latest result.
-     * The first fetch happens immediately upon collection.
-     */
     fun observeRoomState(roomId: String, intervalMs: Long = 5_000L): Flow<Result<RoomState>> = flow {
-        while (true) {
-            val result = runCatching { api.fetchRoomState(roomId) }
-            emit(result)
-            delay(intervalMs)
-        }
+        while (true) { val r = runCatching { api.getRoomState(roomId) }; emit(r); delay(intervalMs) }
     }.flowOn(Dispatchers.Default)
 }

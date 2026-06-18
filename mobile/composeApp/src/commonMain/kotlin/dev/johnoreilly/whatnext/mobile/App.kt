@@ -37,6 +37,7 @@ fun App() {
         // State for join + room state
         var playerName by remember { mutableStateOf("") }
         var roomCode by remember { mutableStateOf("") }
+        var playerToken by remember { mutableStateOf<String?>(null) }
         var roomStateResult by remember { mutableStateOf<Result<RoomState>?>(null) }
         var joining by remember { mutableStateOf(false) }
         var refreshingRoomState by remember { mutableStateOf(false) }
@@ -88,6 +89,7 @@ fun App() {
                                 roomStateResult = null
                                 val result = runCatching { repository.joinRoom(code, name) }
                                 if (result.isSuccess) {
+                                    playerToken = result.getOrNull()?.playerToken
                                     roomStateResult = runCatching { repository.getRoomState(code) }
                                 } else {
                                     joinError = result.exceptionOrNull()?.message ?: "Join failed"
@@ -173,7 +175,7 @@ fun App() {
                                             scope.launch {
                                                 starting = true
                                                 startError = null
-                                                val startResult = runCatching { repository.startRoom(state.roomId) }
+                                                val startResult = runCatching { repository.startGame(state.roomId, playerToken) }
                                                 if (startResult.isSuccess) {
                                                     val refreshResult = runCatching { repository.getRoomState(state.roomId) }
                                                     if (refreshResult.isSuccess) {
@@ -228,7 +230,7 @@ fun App() {
                                                 submitting = true
                                                 submitError = null
                                                 val submitResult = runCatching {
-                                                    repository.submitInput(state.roomId, playerName.trim(), inputText.trim())
+                                                    repository.submitInput(state.roomId, playerName.trim(), inputText.trim(), playerToken)
                                                 }
                                                 if (submitResult.isSuccess) {
                                                     inputText = ""
